@@ -141,7 +141,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed,  int &error){
 	
 	_isSetup = false;
 	
-	if(!_vfd.begin(path,speed,error))
+	if(!_vfd->begin(path,speed,error))
 		throw Exception("failed to setup VFD ");
 	
 	if( !(_rightRing.begin(rightRingAddress, error)
@@ -156,7 +156,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed,  int &error){
 	_rightRing.setOffset(14,true);
 	_leftRing.setOffset(14, true);		// slight offset for volume control of zero
 	
-	if( _vfd.reset()
+	if( _vfd->reset()
 		&& _rightRing.reset()
 		&& _leftRing.reset()
 		&& _rightRing.clearAll()
@@ -683,7 +683,7 @@ bool DisplayMgr::setBrightness(double level) {
 		//	printf("setBrightness %f %d\n", level, ledCurrent);
 		
 		if(vfdLevel == 0) vfdLevel  = 1;
-		success = _vfd.setBrightness(vfdLevel);
+		success = _vfd->setBrightness(vfdLevel);
 		
 		_rightRing.SetScaling(ledCurrent);
 		_leftRing.SetScaling(ledCurrent);
@@ -780,15 +780,15 @@ void DisplayMgr::drawReceptionBars(uint8_t x,  uint8_t y, double dBm, bool displ
 		default:;
 	};
 	
-	_vfd.setCursor( x , y-6)	;
- 	_vfd.writePacket(image, sizeof(noBars));
+	_vfd->setCursor( x , y-6)	;
+ 	_vfd->writePacket(image, sizeof(noBars));
 		
-	_vfd.setFont(VFD::FONT_MINI);
- 	_vfd.setCursor(x+11, y);
+	_vfd->setFont(VFD::FONT_MINI);
+ 	_vfd->setCursor(x+11, y);
 	if(dBm < 0)
-		_vfd.printPacket("%-3d ", int(dBm));
+		_vfd->printPacket("%-3d ", int(dBm));
 	else
-		_vfd.printPacket("     ");
+		_vfd->printPacket("     ");
 
 }
 
@@ -1200,8 +1200,8 @@ bool DisplayMgr::menuSelectAction(knob_action_t action){
 
 void DisplayMgr::drawMenuScreen(modeTransition_t transition){
 	
-	//	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	//	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	
 	uint8_t startV =  24;
 	uint8_t lineHeight = 9;
@@ -1210,33 +1210,33 @@ void DisplayMgr::drawMenuScreen(modeTransition_t transition){
 	
 	if(transition == TRANS_LEAVING) {
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING) {
 		_rightKnob.setAntiBounce(antiBounceSlow);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		auto title = _menuTitle;
 		
 		if(title.size() > 16){
 			std::transform(title.begin(), title.end(),title.begin(), ::toupper);
 			title = truncate(title, 20);
-			_vfd.setFont(VFD::FONT_MINI);
-			_vfd.setCursor(10,10);
+			_vfd->setFont(VFD::FONT_MINI);
+			_vfd->setCursor(10,10);
 		}
 		else {
 			if (title.empty()) title = "Select";
-			_vfd.setFont(VFD::FONT_5x7);
-			_vfd.setCursor(20,10);
+			_vfd->setFont(VFD::FONT_5x7);
+			_vfd->setCursor(20,10);
 		}
-		_vfd.write(title);
+		_vfd->write(title);
 	}
 	
 	// did something change?
 	if(transition == TRANS_ENTERING || transition == TRANS_REFRESH){
 		
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		if( (_currentMenuItem - maxLines) > _menuCursor) {
 			_menuCursor = max(_currentMenuItem - maxLines, 0);
 		}
@@ -1247,10 +1247,10 @@ void DisplayMgr::drawMenuScreen(modeTransition_t transition){
 		uint8_t cursorV = startV;
 		for(int i = _menuCursor; (i <= _menuCursor + maxLines) && (i < _menuItems.size()) ; i ++){
 			char buffer[64] = {0};
-			_vfd.setCursor(0,cursorV);
+			_vfd->setCursor(0,cursorV);
 			//			sprintf(buffer, "%c%-18s %s",  i == _currentMenuItem?'\xb9':' ' , _menuItems[i].c_str(), moreIndicator.c_str());
 			sprintf(buffer, "%c%-18s",  i == _currentMenuItem?'\xb9':' ' , _menuItems[i].c_str() );
-			_vfd.write(buffer );
+			_vfd->write(buffer );
 			cursorV += lineHeight;
 		}
 		
@@ -1258,7 +1258,7 @@ void DisplayMgr::drawMenuScreen(modeTransition_t transition){
 			uint8_t scrolltop = startV-lineHeight;
 			float bar_height =  (float)(maxLines +1)/ (float)_menuItems.size() ;
 			float offset =  (float)_currentMenuItem / ((float)_menuItems.size() -1) ;
-			_vfd.drawScrollBar(scrolltop, bar_height ,offset);
+			_vfd->drawScrollBar(scrolltop, bar_height ,offset);
 		}
 	}
 	
@@ -1912,8 +1912,8 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 	PiCarMgr* mgr	= PiCarMgr::shared();
 	RadioMgr* radio 	= PiCarMgr::shared()->radio();
 	
-	int centerX = _vfd.width() /2;
-	int centerY = _vfd.height() /2;
+	int centerX = _vfd->width() /2;
+	int centerY = _vfd->height() /2;
 	
 	static int  modeStart = 5;
 	
@@ -1935,7 +1935,7 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 	}
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		_rightRing.clearAll();
 		
 	}
@@ -1952,15 +1952,15 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 			string str = "OFF";
 			auto textCenter =  centerX - (str.size() * 11);
 			
-			TRY(_vfd.setFont(VFD::FONT_10x14));
-			TRY(_vfd.setCursor( textCenter ,centerY+10));
-			TRY(_vfd.write(str));
+			TRY(_vfd->setFont(VFD::FONT_10x14));
+			TRY(_vfd->setCursor( textCenter ,centerY+10));
+			TRY(_vfd->write(str));
 		}
 		else {
 			uint32_t  freq =  radio->frequency();
 			// we might need an extra refresh if switching modes
 			if(lastMode != mode){
-				_vfd.clearScreen();
+				_vfd->clearScreen();
 				_rightRing.clearAll();
 				lastMode = mode;
 			}
@@ -1970,13 +1970,13 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 				string str = "AUX";
 				auto freqCenter =  centerX  -( (str.size() /2)  * 11) - 7 ;
 				
-				TRY(_vfd.setFont(VFD::FONT_10x14));
-				TRY(_vfd.setCursor( freqCenter ,centerY+10));
-				TRY(_vfd.write(str));
+				TRY(_vfd->setFont(VFD::FONT_10x14));
+				TRY(_vfd->setCursor( freqCenter ,centerY+10));
+				TRY(_vfd->write(str));
 			}
 			else if(mode == RadioMgr::AIRPLAY){
 				
-				_vfd.setFont(VFD::FONT_5x7);
+				_vfd->setFont(VFD::FONT_5x7);
 				
 				constexpr int maxLen = 21;
 				string spaces(maxLen, ' ');
@@ -2005,12 +2005,12 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 						VFD::VFD_CLEAR_AREA,
 						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY-16),
 						static_cast<uint8_t> (128),static_cast<uint8_t> (centerY+4)};
-					_vfd.writePacket(buff2, sizeof(buff2));
+					_vfd->writePacket(buff2, sizeof(buff2));
 					
 					string str = "- NOT PLAYING -";
-					_vfd.setCursor( centerX - ((str.size()*5) /2 ), centerY-7);
-					_vfd.setFont(VFD::FONT_MINI);
-					_vfd.printPacket(str.c_str() );
+					_vfd->setCursor( centerX - ((str.size()*5) /2 ), centerY-7);
+					_vfd->setFont(VFD::FONT_MINI);
+					_vfd->printPacket(str.c_str() );
 				}
 				else {
 					// correct UTF8 single comma quotation mark apostrophe
@@ -2029,13 +2029,13 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					string portionOfSpaces1 = spaces.substr(0, (maxLen - artistStr.size()) / 2);
 					artistStr = portionOfSpaces1 + artistStr;
 					
-					_vfd.setFont(VFD::FONT_5x7);
+					_vfd->setFont(VFD::FONT_5x7);
 					
-					_vfd.setCursor(0,centerY-7);
-					_vfd.printPacket("%-21s",titleStr.c_str() );
+					_vfd->setCursor(0,centerY-7);
+					_vfd->printPacket("%-21s",titleStr.c_str() );
 					
-					_vfd.setCursor(0,centerY+3);
-					_vfd.printPacket("%-21s",artistStr.c_str() );
+					_vfd->setCursor(0,centerY+3);
+					_vfd->printPacket("%-21s",artistStr.c_str() );
 					
 				}
 				
@@ -2065,16 +2065,16 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 				else if  (precision == 1)
 					modeStart += 5;
 				
-				_vfd.setFont(VFD::FONT_MINI);
-				_vfd.setCursor(modeStart, centerY+0) ;
-				_vfd.write(modStr);
+				_vfd->setFont(VFD::FONT_MINI);
+				_vfd->setCursor(modeStart, centerY+0) ;
+				_vfd->write(modStr);
 				
-				_vfd.setFont(VFD::FONT_10x14);
-				_vfd.setCursor( freqCenter ,centerY+10);
-				_vfd.write(str);
+				_vfd->setFont(VFD::FONT_10x14);
+				_vfd->setCursor( freqCenter ,centerY+10);
+				_vfd->write(str);
 				
-				_vfd.setFont(VFD::FONT_MINI); _vfd.write( " ");
-				_vfd.setFont(VFD::FONT_5x7); _vfd.write( hzstr);
+				_vfd->setFont(VFD::FONT_MINI); _vfd->write( " ");
+				_vfd->setFont(VFD::FONT_5x7); _vfd->write( hzstr);
 				
 				// Draw title centered inb char buffer
 				constexpr int  titleMaxSize = 20;
@@ -2090,17 +2090,17 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					int offset  = (titleMaxSize /2) - (titleLen/2);
 					memcpy( titlebuff+offset , title.c_str(), titleLen );
 				};
-				TRY(_vfd.setCursor( titleStart ,titleBottom ));
-				TRY(_vfd.write( titlebuff));
+				TRY(_vfd->setCursor( titleStart ,titleBottom ));
+				TRY(_vfd->write( titlebuff));
 				
 			}
-			_vfd.setCursor(0, 60);
+			_vfd->setCursor(0, 60);
 			if(mgr->isPresetChannel(mode, freq)){
-				_vfd.setFont(VFD::FONT_MINI);
-				_vfd.printPacket("PRESET");
+				_vfd->setFont(VFD::FONT_MINI);
+				_vfd->printPacket("PRESET");
 			}
 			else {
-				_vfd.printPacket("      ");
+				_vfd->printPacket("      ");
 			}
 		}
 	}
@@ -2110,12 +2110,12 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 			 ||  mode == RadioMgr::VHF
 			 ||  mode == RadioMgr::UHF	))
 	{
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.setCursor(modeStart, centerY+9);
-		_vfd.write(muxstring);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(modeStart, centerY+9);
+		_vfd->write(muxstring);
 		
 		drawReceptionBars(0, centerY+19, radio->get_if_level());
-		_vfd.printPacket("%-8s", radio->isSquelched()?"SQLCH":"" );
+		_vfd->printPacket("%-8s", radio->isSquelched()?"SQLCH":"" );
 	}
 	
 	drawEngineCheck();
@@ -2131,27 +2131,27 @@ void DisplayMgr::drawMessageScreen(modeTransition_t transition){
 	
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
-		uint8_t width = _vfd.width();
+		uint8_t width = _vfd->width();
 		
 		int centerX = width /2;
-		int centerY = _vfd.height() /2;
+		int centerY = _vfd->height() /2;
 		
 		string str = _menuTitle;
 		
 		if(str.size() > 20){
 			std::transform(str.begin(), str.end(),str.begin(), ::toupper);
 			str = truncate(str, 40);
-			_vfd.setCursor( centerX - ((str.size()*5) /2 ), centerY + 5);
-			_vfd.setFont(VFD::FONT_MINI);
+			_vfd->setCursor( centerX - ((str.size()*5) /2 ), centerY + 5);
+			_vfd->setFont(VFD::FONT_MINI);
 		}
 		else{
-			_vfd.setCursor( centerX - ((str.size()*7) /2 ), centerY + 5);
-			_vfd.setFont(VFD::FONT_5x7);
+			_vfd->setCursor( centerX - ((str.size()*7) /2 ), centerY + 5);
+			_vfd->setFont(VFD::FONT_5x7);
 		}
 		
-		_vfd.printPacket("%s", str.c_str());
+		_vfd->printPacket("%s", str.c_str());
 	}
 	
 	if(transition == TRANS_LEAVING) {
@@ -2176,39 +2176,39 @@ void DisplayMgr::drawStartupScreen(modeTransition_t transition){
 		
 	}
 #else
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	
 	int centerX = width /2;
-	int centerY = _vfd.height() /2;
+	int centerY = _vfd->height() /2;
 	
 	
 	if(transition == TRANS_ENTERING){
 		
-		_vfd.setPowerOn(true);
-		_vfd.clearScreen();
-		_vfd.clearScreen();
+		_vfd->setPowerOn(true);
+		_vfd->clearScreen();
+		_vfd->clearScreen();
 		uint8_t leftbox 	= 5;
 		uint8_t rightbox 	= width - 5;
 		uint8_t topbox 	= 5 ;
 		uint8_t bottombox = height - 5  ;
 		
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		//draw box outline
 		uint8_t buff1[] = {VFD::VFD_OUTLINE,leftbox,topbox,rightbox,bottombox };
-		_vfd.writePacket(buff1, sizeof(buff1), 0);
+		_vfd->writePacket(buff1, sizeof(buff1), 0);
 		
 		string str = "PiCar";
 		auto start  =  centerX  -( (str.size() /2)  * 11) - 7 ;
-		_vfd.setFont(VFD::FONT_10x14);
-		_vfd.setCursor( start ,centerY+5);
-		_vfd.write(str);
+		_vfd->setFont(VFD::FONT_10x14);
+		_vfd->setCursor( start ,centerY+5);
+		_vfd->write(str);
 		
 		string verstr = string(PiCarMgr::PiCarMgr_Version);
 		std::transform(verstr.begin(), verstr.end(),verstr.begin(), ::toupper);
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.printPacket("%s", verstr.c_str());
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("%s", verstr.c_str());
 		
 		LEDeventStartup();
 	}
@@ -2237,9 +2237,9 @@ void DisplayMgr::drawStartupScreen(modeTransition_t transition){
 			str += " CANBUS";
 		}
 		
-		_vfd.setCursor( 15, 55);
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.printPacket("%-20s", str.c_str());
+		_vfd->setCursor( 15, 55);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("%-20s", str.c_str());
 	}
 	
 	if(transition == TRANS_LEAVING){
@@ -2257,11 +2257,11 @@ void DisplayMgr::drawDeviceStatusScreen(modeTransition_t transition){
 	
 	if(transition == TRANS_ENTERING){
 		
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
-		_vfd.setCursor(7, 10);
-		_vfd.setFont(VFD::FONT_5x7);
-		_vfd.write("Device Status");
+		_vfd->setCursor(7, 10);
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->write("Device Status");
 		
 		drawDeviceStatus();
 	}
@@ -2282,32 +2282,32 @@ void DisplayMgr::drawDeviceStatus(){
 	row+=2;
 	
 	memset(buffer, ' ', sizeof(buffer));
-	row+=8; _vfd.setCursor(col, row);
-	_vfd.setFont(VFD::FONT_MINI);
+	row+=8; _vfd->setCursor(col, row);
+	_vfd->setFont(VFD::FONT_MINI);
 	
 	RtlSdr::device_info_t info;
 	
 	if(radio->isConnected() && radio->getDeviceInfo(info) ){
 		sprintf( buffer ,"\xBA RADIO OK");
-		_vfd.writePacket( (const uint8_t*) buffer,21);
-		row += 6;  _vfd.setCursor(col+10, row );
+		_vfd->writePacket( (const uint8_t*) buffer,21);
+		row += 6;  _vfd->setCursor(col+10, row );
 		std::transform(info.product.begin(), info.product.end(),info.product.begin(), ::toupper);
-		_vfd.write(info.product);
+		_vfd->write(info.product);
 	}
 	else {
 		sprintf( buffer ,"X RADIO FAIL");
-		_vfd.writePacket( (const uint8_t*) buffer,21);
+		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	
 	memset(buffer, ' ', sizeof(buffer));
-	row += 8; _vfd.setCursor(col, row);
+	row += 8; _vfd->setCursor(col, row);
 	if(gps->isConnected()){
 		sprintf( buffer ,"\xBA GPS OK");
-		_vfd.writePacket( (const uint8_t*) buffer,21);
+		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	else {
 		sprintf( buffer ,"X GPS FAIL");
-		_vfd.writePacket( (const uint8_t*) buffer,21);
+		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	
 	drawTemperature();
@@ -2318,7 +2318,7 @@ void DisplayMgr::drawDeviceStatus(){
 
 void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 	
-	int centerY = _vfd.height() /2;
+	int centerY = _vfd->height() /2;
 	
 	time_t rawtime;
 	struct tm timeinfo = {0};
@@ -2334,18 +2334,18 @@ void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 	}
 	
 	if(transition == TRANS_ENTERING){
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 	}
 	
 	if(rawtime != -1){
 		std::strftime(buffer, sizeof(buffer)-1, "%2l:%M:%S", &timeinfo);
 		
-		_vfd.setCursor(10,38) ;
-		_vfd.setFont(VFD::FONT_10x14) ;
-		_vfd.write(buffer) ;
+		_vfd->setCursor(10,38) ;
+		_vfd->setFont(VFD::FONT_10x14) ;
+		_vfd->write(buffer) ;
 		
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.write( (timeinfo.tm_hour > 12)?" PM":" AM");
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->write( (timeinfo.tm_hour > 12)?" PM":" AM");
 	}
 	
 	if(_airplayStatus)
@@ -2357,7 +2357,7 @@ void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 			static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY+9),
 			static_cast<uint8_t> (0+100),static_cast<uint8_t> (centerY+19)};
 		
-		_vfd.writePacket(buff2, sizeof(buff2));
+		_vfd->writePacket(buff2, sizeof(buff2));
 	}
 	
 	drawTemperature();
@@ -2368,12 +2368,12 @@ void DisplayMgr::drawAirplayLogo(uint8_t x,  uint8_t y, string text ){
 	
 	const uint8_t airplayLogo[] = {0x1A,0x80, 0x18,0x09, 0x1c,0x62,0x8d,0x93,0xa7,0x93,0x8d,0x62,0x1c};
 	
-	_vfd.setCursor( x, y)	;
-	_vfd.writePacket(airplayLogo, sizeof(airplayLogo));
+	_vfd->setCursor( x, y)	;
+	_vfd->writePacket(airplayLogo, sizeof(airplayLogo));
 	
-	_vfd.setFont(VFD::FONT_MINI);
-	_vfd.setCursor(x+11, y+7);
-	_vfd.printPacket("AIRPLAY %-15s",  text.c_str());
+	_vfd->setFont(VFD::FONT_MINI);
+	_vfd->setCursor(x+11, y+7);
+	_vfd->printPacket("AIRPLAY %-15s",  text.c_str());
 }
 
 
@@ -2411,19 +2411,19 @@ void  DisplayMgr::drawTemperature(){
 	}
 	
 	if(hasInside || hasOutside){
-		_vfd.setCursor( 0, 7)	;
-		_vfd.setFont(VFD::FONT_5x7);
-		_vfd.printPacket("%-10s", buffer);
+		_vfd->setCursor( 0, 7)	;
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->printPacket("%-10s", buffer);
 	}
 	
 	
 	//	if(db->getFloatValue(VAL_CPU_INFO_TEMP, cTemp)){
 	//		char buffer[64] = {0};
 	//
-	//		TRY(_vfd.setCursor(64, 55));
-	//		TRY(_vfd.setFont(VFD::FONT_5x7));
+	//		TRY(_vfd->setCursor(64, 55));
+	//		TRY(_vfd->setFont(VFD::FONT_5x7));
 	//		sprintf(buffer, "CPU:%d\xa0" "C ", (int) round(cTemp) );
-	//		TRY(_vfd.write(buffer));
+	//		TRY(_vfd->write(buffer));
 	//	}
 	
 }
@@ -2431,13 +2431,13 @@ void  DisplayMgr::drawTemperature(){
 
 void DisplayMgr::drawEngineCheck(){
 	FrameDB*		fDB 	= PiCarMgr::shared()->can()->frameDB();
-	uint8_t width = _vfd.width();
+	uint8_t width = _vfd->width();
 	uint8_t midX = width/2;
 	
 	bool engineCheck = false;
 	bitset<8>  bits = {0};
 	
-	_vfd.setCursor(midX, 60);
+	_vfd->setCursor(midX, 60);
 	
 	char buffer[20] = {0};
 	
@@ -2465,8 +2465,8 @@ void DisplayMgr::drawEngineCheck(){
 		else sprintf(buffer, "DOORS OPEN");
 	}
 	
-	_vfd.setFont(VFD::FONT_MINI);
-	_vfd.printPacket("%-20s", buffer);
+	_vfd->setFont(VFD::FONT_MINI);
+	_vfd->printPacket("%-20s", buffer);
 	
 	
 }
@@ -2478,7 +2478,7 @@ void DisplayMgr::drawInternalError(modeTransition_t transition){
 	
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 	}
 	
 	if(transition == TRANS_LEAVING) {
@@ -2492,16 +2492,16 @@ void DisplayMgr::drawShutdownScreen(){
 	
 	
 	//	printf("shutdown display");
-	_vfd.clearScreen();
-	_vfd.clearScreen();
+	_vfd->clearScreen();
+	_vfd->clearScreen();
 	_rightRing.clearAll();
 	_leftRing.clearAll();
 	
-	TRY(_vfd.setFont(VFD::FONT_5x7));
-	TRY(_vfd.setCursor(10,35));
-	TRY(_vfd.write("  Well... Bye"));
+	TRY(_vfd->setFont(VFD::FONT_5x7));
+	TRY(_vfd->setCursor(10,35));
+	TRY(_vfd->write("  Well... Bye"));
 	sleep(1);
-	_vfd.clearScreen();
+	_vfd->clearScreen();
 	
 }
 
@@ -2517,7 +2517,7 @@ void DisplayMgr::drawCANBusScreen(modeTransition_t transition){
 	
 	if(transition == TRANS_ENTERING) {
 		_rightKnob.setAntiBounce(antiBounceSlow);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 	}
 	
 	if(transition == TRANS_LEAVING) {
@@ -2525,9 +2525,9 @@ void DisplayMgr::drawCANBusScreen(modeTransition_t transition){
 		return;
 	}
 	
-	TRY(_vfd.setFont(VFD::FONT_5x7));
-	TRY(_vfd.setCursor(0,18));
-	TRY(_vfd.write("CANbus Activity"));
+	TRY(_vfd->setFont(VFD::FONT_5x7));
+	TRY(_vfd->setCursor(0,18));
+	TRY(_vfd->write("CANbus Activity"));
 	
 	char buffer[64] = {0};
 	char* p = buffer;
@@ -2553,9 +2553,9 @@ void DisplayMgr::drawCANBusScreen(modeTransition_t transition){
 	else
 		p  += sprintf(p, "%-10s","---");
 	
-	TRY(_vfd.setFont(VFD::FONT_5x7));
-	TRY(_vfd.setCursor(10,33));
-	TRY(_vfd.write(buffer));
+	TRY(_vfd->setFont(VFD::FONT_5x7));
+	TRY(_vfd->setCursor(10,33));
+	TRY(_vfd->write(buffer));
 	
 	// JEEP BUS
 	lastTime = 0;
@@ -2579,15 +2579,15 @@ void DisplayMgr::drawCANBusScreen(modeTransition_t transition){
 		p  += sprintf(p, "%-10s","---");
 	
 	
-	TRY(_vfd.setFont(VFD::FONT_5x7));
-	TRY(_vfd.setCursor(10,43));
-	TRY(_vfd.write(buffer));
+	TRY(_vfd->setFont(VFD::FONT_5x7));
+	TRY(_vfd->setCursor(10,43));
+	TRY(_vfd->write(buffer));
 	
 	drawTimeBox();
 	
-	TRY(_vfd.setFont(VFD::FONT_5x7));
-	TRY(_vfd.setCursor(_vfd.width()-5,60));
-	_vfd.write(moreNext) ;
+	TRY(_vfd->setFont(VFD::FONT_5x7));
+	TRY(_vfd->setCursor(_vfd->width()-5,60));
+	_vfd->write(moreNext) ;
 	
 }
 
@@ -2598,7 +2598,7 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 	
 	PiCarCAN*	can 	= PiCarMgr::shared()->can();
 	PiCarDB*		db 	= PiCarMgr::shared()->db();
-	uint8_t width 	= _vfd.width();
+	uint8_t width 	= _vfd->width();
 	uint8_t midX = width/2;
 	
 	uint8_t col1 = 5;
@@ -2618,10 +2618,10 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 		cachedProps.clear();
 		db->getCanbusDisplayProps(cachedProps);
 		_rightKnob.setAntiBounce(antiBounceSlow);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		// draw titles
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		for(uint8_t	 i = start_item; i < end_item; i++)
 			if(cachedProps.count(i)){
@@ -2631,14 +2631,14 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 				
 				if(i <  end_item - 3){
 					can->request_OBDpolling(item.key);
-					_vfd.setCursor(col1, row1 + (line)  * rowsize );
-					_vfd.write(item.title);
+					_vfd->setCursor(col1, row1 + (line)  * rowsize );
+					_vfd->write(item.title);
 					
 				}
 				else {
 					can->request_OBDpolling(item.key);
-					_vfd.setCursor(col2, row1 + ( (line - 3)  * rowsize ));
-					_vfd.write(item.title);
+					_vfd->setCursor(col2, row1 + ( (line - 3)  * rowsize ));
+					_vfd->write(item.title);
 				}
 			}
 	}
@@ -2657,7 +2657,7 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 	
 	
 	// Draw values
-	_vfd.setFont(VFD::FONT_5x7);
+	_vfd->setFont(VFD::FONT_5x7);
 	for(uint8_t	 i = start_item; i < end_item; i++){
 		
 		int line = ((i - 1) % 6);
@@ -2676,8 +2676,8 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 		
 		// spread across 21 chars
 		sprintf( buffer , "%-9s  %-9s", val1.c_str(), val2.c_str());
-		_vfd.setCursor(col1 ,(row1 + (line)  * rowsize) + 9);
-		_vfd.writePacket( (const uint8_t*) buffer,21);
+		_vfd->setCursor(col1 ,(row1 + (line)  * rowsize) + 9);
+		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	
 	drawTimeBox();
@@ -2691,7 +2691,7 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 	uint8_t row = 7;
 	string str;
 	
-	uint8_t width = _vfd.width();
+	uint8_t width = _vfd->width();
 	uint8_t midX = width/2;
 	
 	uint8_t utmRow = row;
@@ -2700,21 +2700,21 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 	GPSmgr*	gps 	= PiCarMgr::shared()->gps();
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		// draw titles
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.setCursor(2,utmRow);
-		_vfd.printPacket("UTM");
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,utmRow);
+		_vfd->printPacket("UTM");
 		
-		_vfd.setCursor(2,altRow);
-		_vfd.printPacket("ALTITUDE");
+		_vfd->setCursor(2,altRow);
+		_vfd->printPacket("ALTITUDE");
 		
-		_vfd.setCursor(midX +20 ,utmRow+10);
-		_vfd.printPacket("HEADING");
+		_vfd->setCursor(midX +20 ,utmRow+10);
+		_vfd->printPacket("HEADING");
 		
-		_vfd.setCursor(midX +20 ,altRow);
-		_vfd.printPacket("SPEED");
+		_vfd->setCursor(midX +20 ,altRow);
+		_vfd->printPacket("SPEED");
 		
 	}
 	
@@ -2728,34 +2728,34 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 		string utm = GPSmgr::UTMString(location);
 		vector<string> v = split<string>(utm, " ");
 		
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
-		_vfd.setCursor(col+7, utmRow+10 );
-		_vfd.printPacket("%-3s", v[0].c_str());
+		_vfd->setCursor(col+7, utmRow+10 );
+		_vfd->printPacket("%-3s", v[0].c_str());
 		
-		_vfd.setCursor(col+30, utmRow+10 );
-		_vfd.printPacket("%-8s", v[1].c_str());
+		_vfd->setCursor(col+30, utmRow+10 );
+		_vfd->printPacket("%-8s", v[1].c_str());
 		
-		_vfd.setCursor(col+30 - 6, utmRow+20 );
-		_vfd.printPacket("%-8s", v[2].c_str());
+		_vfd->setCursor(col+30 - 6, utmRow+20 );
+		_vfd->printPacket("%-8s", v[2].c_str());
 		
 		if(location.altitudeIsValid)  {
-			_vfd.setCursor(col+30, altRow+10);
+			_vfd->setCursor(col+30, altRow+10);
 			constexpr double  M2FT = 	3.2808399;
-			_vfd.printPacket("%-5.1f",location.altitude * M2FT);
+			_vfd->printPacket("%-5.1f",location.altitude * M2FT);
 		}
 		
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.setCursor(0,60)	;
-		_vfd.printPacket( "SATS: %2d ",  location.numSat);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(0,60)	;
+		_vfd->printPacket( "SATS: %2d ",  location.numSat);
 		
-		_vfd.setCursor(midX +20,60)	;
-		_vfd.printPacket( "DOP: %-2.1f ",  location.DOP/10.);
+		_vfd->setCursor(midX +20,60)	;
+		_vfd->printPacket( "DOP: %-2.1f ",  location.DOP/10.);
 		
 	}
 	
 	static int	last_heading = INT_MAX;
-	_vfd.setFont(VFD::FONT_5x7);
+	_vfd->setFont(VFD::FONT_5x7);
 	
 	GPSVelocity_t velocity;
 	if(gps->GetVelocity(velocity)){
@@ -2769,8 +2769,8 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 		memset(buffer, ' ', sizeof(buffer));
 		double mph = velocity.speed * 1.15078;  // knots to mph
 		sprintf( buffer , "%3d mph", (int)floor(mph));
-		_vfd.setCursor(midX +20 ,altRow+10);
-		_vfd.printPacket("%-8s ", buffer);
+		_vfd->setCursor(midX +20 ,altRow+10);
+		_vfd->printPacket("%-8s ", buffer);
 	}
 	
 	
@@ -2782,12 +2782,12 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 		
 		memset(buffer, ' ', sizeof(buffer));
 		sprintf( buffer , "%3d\xa0\x1c%2s\x1d ",last_heading, dir.c_str());
-		_vfd.setCursor(midX +20 ,utmRow+20);
-		_vfd.printPacket("%-8s ", buffer);
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", buffer);
 	}
 	else {
-		_vfd.setCursor(midX +20 ,utmRow+20);
-		_vfd.printPacket("%-8s ", "---");
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", "---");
 	}
 	
 	drawTimeBox();
@@ -2806,9 +2806,9 @@ void DisplayMgr::drawTimeBox(){
 	
 	char timebuffer[16] = {0};
 	std::strftime(timebuffer, sizeof(timebuffer)-1, "%2l:%M%P", &timeinfo);
-	_vfd.setFont(VFD::FONT_5x7);
-	_vfd.setCursor(_vfd.width() - (strlen(timebuffer) * 6) ,7);
-	_vfd.write(timebuffer);
+	_vfd->setFont(VFD::FONT_5x7);
+	_vfd->setCursor(_vfd->width() - (strlen(timebuffer) * 6) ,7);
+	_vfd->write(timebuffer);
 	
 }
 
@@ -2856,7 +2856,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 	if(transition == TRANS_LEAVING) {
 		
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
 		return;
@@ -2866,15 +2866,15 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 	if(transition == TRANS_ENTERING){
 		_rightKnob.setAntiBounce(antiBounceSlow);
 	 
-	 		_vfd.clearScreen();
+	 		_vfd->clearScreen();
 		// top line
-		_vfd.setCursor(0, 7);
-		_vfd.setFont(VFD::FONT_5x7);
-		_vfd.printPacket("PiCar ");
+		_vfd->setCursor(0, 7);
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->printPacket("PiCar ");
 		
 		str = string(PiCarMgr::PiCarMgr_Version);
 		std::transform(str.begin(), str.end(),str.begin(), ::toupper);
-		_vfd.setFont(VFD::FONT_MINI); _vfd.printPacket("%s", str.c_str());
+		_vfd->setFont(VFD::FONT_MINI); _vfd->printPacket("%s", str.c_str());
 
 		// safety check
 		if(_lineOffset >=  10)
@@ -2905,19 +2905,19 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 		
 		if(db->getFloatValue(VAL_CPU_INFO_TEMP, cTemp)){
 			
-			_vfd.setCursor(col1_start,16  );
+			_vfd->setCursor(col1_start,16  );
 			
-			_vfd.setFont(VFD::FONT_MINI);
-			_vfd.printPacket("CPU TEMP: ");
+			_vfd->setFont(VFD::FONT_MINI);
+			_vfd->printPacket("CPU TEMP: ");
 			
-			_vfd.setFont(VFD::FONT_5x7);
-			_vfd.printPacket("%d\xa0" "C ", (int) round(cTemp));
+			_vfd->setFont(VFD::FONT_5x7);
+			_vfd->printPacket("%d\xa0" "C ", (int) round(cTemp));
 			
 			if(db->getIntValue(VAL_FAN_SPEED, fanspeed)){
 				
-				_vfd.setFont(VFD::FONT_MINI);
-				_vfd.printPacket("FAN: ");
-				_vfd.setFont(VFD::FONT_5x7);
+				_vfd->setFont(VFD::FONT_MINI);
+				_vfd->printPacket("FAN: ");
+				_vfd->setFont(VFD::FONT_5x7);
 				
 				char buffer[10];
 				
@@ -2929,7 +2929,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 					sprintf(buffer, "%d%%", fanspeed);
 				}
 				
-				_vfd.printPacket("%-4s ", buffer);
+				_vfd->printPacket("%-4s ", buffer);
 			}
 		}
 	}
@@ -3024,14 +3024,14 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 		}
 		
 		constexpr int top = 16+5 + 4;
-		_vfd.printRows(top, 9 , rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
+		_vfd->printRows(top, 9 , rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
 		
 		if(rows.size() > displayedLines){
 			
 			float bar_height =  (float)(displayedLines +1)/ (float)rows.size() ;
 			float offset =  (float)_lineOffset / ((float)rows.size() -1) ;
 			
-		_vfd.drawScrollBar(top - 9, bar_height ,offset);
+		_vfd->drawScrollBar(top - 9, bar_height ,offset);
 		}
 	}
 }
@@ -3082,19 +3082,19 @@ void DisplayMgr::drawScannerScreen(modeTransition_t transition){
 	
 	
 	// 	printf("drawScannerScreen(%d)\n", transition);
-	//	int centerX = _vfd.width() /2;
-	int centerY = _vfd.height() /2;
+	//	int centerX = _vfd->width() /2;
+	int centerY = _vfd->height() /2;
 	
 	if(transition == TRANS_ENTERING){
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
-		_vfd.setCursor(0, 60);
+		_vfd->setCursor(0, 60);
 		if(mgr->isPresetChannel(RadioMgr::SCANNER, 0)){
-			_vfd.setFont(VFD::FONT_MINI);
-			_vfd.printPacket("PRESET");
+			_vfd->setFont(VFD::FONT_MINI);
+			_vfd->printPacket("PRESET");
 		}
 		else {
-			_vfd.printPacket("      ");
+			_vfd->printPacket("      ");
 		}
 	}
 	
@@ -3118,7 +3118,7 @@ void DisplayMgr::drawScannerScreen(modeTransition_t transition){
 	bool foundSignal = radio->getCurrentScannerChannel(mode, freq);
 	
 	if(foundSignal){
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		constexpr int maxLen = 21;
 		string spaces(maxLen, ' ');
@@ -3131,8 +3131,8 @@ void DisplayMgr::drawScannerScreen(modeTransition_t transition){
 			titleStr = portionOfSpaces + titleStr;
 		}
 		
-		_vfd.setCursor(0,centerY-5);
-		_vfd.printPacket("%-20s",titleStr.c_str() );
+		_vfd->setCursor(0,centerY-5);
+		_vfd->printPacket("%-20s",titleStr.c_str() );
 		
 		string channelStr = RadioMgr::modeString(mode) + " "
 		+ RadioMgr::hertz_to_string(freq, 3) + " "
@@ -3140,8 +3140,8 @@ void DisplayMgr::drawScannerScreen(modeTransition_t transition){
 		
 		string portionOfSpaces = spaces.substr(0, (maxLen - channelStr.size()) / 2);
 		channelStr = portionOfSpaces + channelStr;
-		_vfd.setCursor(0,centerY+5);
-		_vfd.printPacket("%-20s",channelStr.c_str() );
+		_vfd->setCursor(0,centerY+5);
+		_vfd->printPacket("%-20s",channelStr.c_str() );
 		
 		drawReceptionBars(0, centerY+19, radio->get_if_level());
 	}
@@ -3158,8 +3158,8 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 	
 	PiCarMgr* mgr	= PiCarMgr::shared();
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	uint8_t midX = width/2;
 	uint8_t midY = height/2;
 	
@@ -3173,17 +3173,17 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 	}
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		// draw centered heading
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		string str = "Dim Screen";
-		_vfd.setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
-		_vfd.write(str);
+		_vfd->setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
+		_vfd->write(str);
 		
 		//draw box outline
 		uint8_t buff1[] = {VFD::VFD_OUTLINE,leftbox,topbox,rightbox,bottombox };
-		_vfd.writePacket(buff1, sizeof(buff1), 0);
+		_vfd->writePacket(buff1, sizeof(buff1), 0);
 	}
 	
 	// brightness scales between 0 - 1.0
@@ -3203,14 +3203,14 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 			static_cast<uint8_t>(start),  static_cast<uint8_t> (topbox+1),
 			static_cast<uint8_t> (rightbox-1),static_cast<uint8_t> (bottombox-1)};
 		
-		_vfd.writePacket(buff2, sizeof(buff2), 1000);
+		_vfd->writePacket(buff2, sizeof(buff2), 1000);
 	}
 	
 	// fill  area box
 	uint8_t buff3[] = {VFD::VFD_SET_AREA,
 		static_cast<uint8_t>(leftbox), static_cast<uint8_t> (topbox+1),
 		static_cast<uint8_t>(itemX),static_cast<uint8_t>(bottombox-1) };
-	_vfd.writePacket(buff3, sizeof(buff3), 1000);
+	_vfd->writePacket(buff3, sizeof(buff3), 1000);
 	
 }
 
@@ -3332,8 +3332,8 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 	
 	//	printf("drawSelectSliderScreen(%d)\n", transition);
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	uint8_t midX = width/2;
 	uint8_t midY = height/2;
 	
@@ -3353,17 +3353,17 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 		return;
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		// draw centered heading
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		string str = _menuSelectionSliderCBInfo->title;
-		_vfd.setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
-		_vfd.write(str);
+		_vfd->setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
+		_vfd->write(str);
 		
 		//draw box outline
 		uint8_t buff1[] = {VFD::VFD_OUTLINE,leftbox,topbox,rightbox,bottombox };
-		_vfd.writePacket(buff1, sizeof(buff1), 0);
+		_vfd->writePacket(buff1, sizeof(buff1), 0);
 	}
 	
 	if(transition == TRANS_ENTERING || transition == TRANS_REFRESH){
@@ -3380,7 +3380,7 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 		itemX = max(itemX,  static_cast<uint8_t> (leftbox+2) );
 		itemX = min(itemX,  static_cast<uint8_t> (rightbox-6) );
 		
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		// clear inside of box
 		uint8_t buff2[] = {VFD::VFD_CLEAR_AREA,
@@ -3392,7 +3392,7 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 			VFD::VFD_SET_CURSOR, itemX, static_cast<uint8_t>(bottombox -1), 0xBB,
 			VFD::VFD_SET_WRITEMODE, 0x00,};	// Normal
 		
-		_vfd.writePacket(buff2, sizeof(buff2), 0);
+		_vfd->writePacket(buff2, sizeof(buff2), 0);
 		
 		constexpr int maxLen = 20;
 		string spaces(maxLen, ' ');
@@ -3401,9 +3401,9 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 		string portionOfSpaces = spaces.substr(0, (maxLen - valStr.size()) / 2);
 		valStr = portionOfSpaces + valStr + portionOfSpaces;
 		
-		_vfd.setFont(VFD::FONT_5x7);
-		_vfd.setCursor( 0, bottombox + 10);
-		_vfd.write(valStr);
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->setCursor( 0, bottombox + 10);
+		_vfd->write(valStr);
 	}
 }
  
@@ -3440,8 +3440,8 @@ void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 	
 //	printf("drawSliderScreen(%d)\n", transition);
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	uint8_t midX = width/2;
 	uint8_t midY = height/2;
 	
@@ -3461,22 +3461,22 @@ void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 		return;
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		// draw centered heading
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		string str = _menuSliderCBInfo->title;
-		_vfd.setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
-		_vfd.write(str);
+		_vfd->setCursor( midX - ((str.size()*5) /2 ), topbox - 5);
+		_vfd->write(str);
 		
 		//draw box outline
 		uint8_t buff1[] = {VFD::VFD_OUTLINE,leftbox,topbox,rightbox,bottombox };
-		_vfd.writePacket(buff1, sizeof(buff1), 0);
+		_vfd->writePacket(buff1, sizeof(buff1), 0);
 		
-		_vfd.setCursor(leftbox - 10, bottombox -1 );
-		_vfd.write(_menuSliderCBInfo->left_text);
-		_vfd.setCursor(rightbox + 5, bottombox -1 );
-		_vfd.write(_menuSliderCBInfo->right_text);
+		_vfd->setCursor(leftbox - 10, bottombox -1 );
+		_vfd->write(_menuSliderCBInfo->left_text);
+		_vfd->setCursor(rightbox + 5, bottombox -1 );
+		_vfd->write(_menuSliderCBInfo->right_text);
 	}
 	
 	
@@ -3504,7 +3504,7 @@ void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 			VFD::VFD_SET_CURSOR, itemX, static_cast<uint8_t>(bottombox -1), 0x5F,
 			VFD::VFD_SET_WRITEMODE, 0x00,};	// Normal
 		
-		_vfd.writePacket(buff2, sizeof(buff2), 0);
+		_vfd->writePacket(buff2, sizeof(buff2), 0);
 		
 	}
 }
@@ -3572,8 +3572,8 @@ void DisplayMgr::drawSquelchScreen(modeTransition_t transition){
 	RadioMgr*	radio 	= PiCarMgr::shared()->radio();
 	int			 maxSquelch = radio->getMaxSquelchRange();
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	uint8_t midX = width/2;
 	uint8_t midY = height/2;
 	
@@ -3589,11 +3589,11 @@ void DisplayMgr::drawSquelchScreen(modeTransition_t transition){
 	}
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
 		//draw box outline
 		uint8_t buff1[] = {VFD::VFD_OUTLINE,leftbox,topbox,rightbox,bottombox };
-		_vfd.writePacket(buff1, sizeof(buff1), 0);
+		_vfd->writePacket(buff1, sizeof(buff1), 0);
 	}
 	
 	// avoid doing a needless refresh.  if this was a timeout event,  then just update the time
@@ -3610,7 +3610,7 @@ void DisplayMgr::drawSquelchScreen(modeTransition_t transition){
 		itemX = max(itemX,  static_cast<uint8_t> (leftbox+2) );
 		itemX = min(itemX,  static_cast<uint8_t> (rightbox-6) );
 		
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		// clear inside of box
 		uint8_t buff2[] = {VFD::VFD_CLEAR_AREA,
@@ -3622,14 +3622,14 @@ void DisplayMgr::drawSquelchScreen(modeTransition_t transition){
 			VFD::VFD_SET_CURSOR, itemX, static_cast<uint8_t>(bottombox -1), 0xBB,
 			VFD::VFD_SET_WRITEMODE, 0x00,};	// Normal
 		
-		_vfd.writePacket(buff2, sizeof(buff2), 0);
+		_vfd->writePacket(buff2, sizeof(buff2), 0);
 		
 		// draw centered heading
 		
 		char buffer[64] = {0};
 		sprintf(buffer, "Squelch: %-3d",squelch);
-		_vfd.setCursor( midX - ((strlen(buffer)*5) /2 ), topbox - 5);
-		_vfd.printPacket(buffer);
+		_vfd->setCursor( midX - ((strlen(buffer)*5) /2 ), topbox - 5);
+		_vfd->printPacket(buffer);
 	}
 }
 
@@ -3677,8 +3677,8 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 	PiCarCAN*	can 	= PiCarMgr::shared()->can();
 	FrameDB*		frameDB 	= can->frameDB();
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	
 	static uint32_t lastHash = 0;
 	static uint8_t lastOffset = 0;
@@ -3694,10 +3694,10 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 		lastHash = 0;
 		_lineOffset = 0;
 		
-		_vfd.clearScreen();
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.setCursor(0,10);
-		_vfd.write("DTC Codes");
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("DTC Codes");
 		
 	}
 	
@@ -3724,7 +3724,7 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 		uint8_t buff2[] = {VFD::VFD_CLEAR_AREA,
 			static_cast<uint8_t>(0),  static_cast<uint8_t> (10),
 			static_cast<uint8_t> (width),static_cast<uint8_t> (height)};
-		_vfd.writePacket(buff2, sizeof(buff2), 1000);
+		_vfd->writePacket(buff2, sizeof(buff2), 1000);
 		
 		needsRedraw = true;
 	}
@@ -3740,8 +3740,8 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 		needsRedraw = false;
 		
 		if(totalCodes == 0 ){
-			_vfd.setCursor(10,height/2);
-			_vfd.write("No Codes");
+			_vfd->setCursor(10,height/2);
+			_vfd->write("No Codes");
 			
 		}
 		else {
@@ -3815,13 +3815,13 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 			int  maxFirstLine  = (int) (lines.size() - displayedLines);
 			if(firstLine > maxFirstLine) firstLine = maxFirstLine;
 			
-			_vfd.printLines(20, 6, lines, firstLine, displayedLines, VFD::FONT_MINI);
+			_vfd->printLines(20, 6, lines, firstLine, displayedLines, VFD::FONT_MINI);
 			if(lines.size() > displayedLines){
 				
 				float bar_height =  (float)(displayedLines +1)/ (float)lines.size() ;
 				float offset =  (float)_lineOffset / ((float)lines.size() -1) ;
 				
-				_vfd.drawScrollBar(11, bar_height ,offset);
+				_vfd->drawScrollBar(11, bar_height ,offset);
 			}
 		}
 	}
@@ -3902,14 +3902,14 @@ void DisplayMgr::drawDTCInfoScreen(modeTransition_t transition, string code){
 		
 		PiCarCAN*	can 	= PiCarMgr::shared()->can();
 		
-		_vfd.clearScreen();
-		_vfd.setFont(VFD::FONT_MINI) ;
-		_vfd.setCursor(0,10);
-		_vfd.write("DIAGNOSTIC CODE" );
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_MINI) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("DIAGNOSTIC CODE" );
 		
-		_vfd.setCursor(0,22);
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.printPacket("%s", code.c_str());
+		_vfd->setCursor(0,22);
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->printPacket("%s", code.c_str());
 		
 		string description = "No Description Available";
 		
@@ -3918,7 +3918,7 @@ void DisplayMgr::drawDTCInfoScreen(modeTransition_t transition, string code){
 		
 		stringvector lines = Utils::split(description, 30);
 		
- 		_vfd.printLines(32, 7, lines, 1, 4, VFD::FONT_MINI);
+ 		_vfd->printLines(32, 7, lines, 1, 4, VFD::FONT_MINI);
 	}
 	
 	drawTimeBox();
@@ -4067,17 +4067,17 @@ bool DisplayMgr::processSelectorKnobActionForEditString( knob_action_t action){
 
 void DisplayMgr::drawEditStringScreen(modeTransition_t transition){
 	
-	uint8_t height = _vfd.height();
-	//	uint8_t width = _vfd.width();
+	uint8_t height = _vfd->height();
+	//	uint8_t width = _vfd->width();
 	// 	int centerX = width /2;
-	int centerY = _vfd.height() /2;
+	int centerY = _vfd->height() /2;
 	
 	if(transition == TRANS_ENTERING) {
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
-		_vfd.setFont(VFD::FONT_5x7);
-		_vfd.setCursor(0,7);
-		_vfd.printPacket("%-14s", _menuTitle.c_str());
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->setCursor(0,7);
+		_vfd->printPacket("%-14s", _menuTitle.c_str());
 		
 		_editString += " ";
 		_currentMenuItem = 0;
@@ -4115,36 +4115,36 @@ void DisplayMgr::drawEditStringScreen(modeTransition_t transition){
 		lastItem = _currentMenuItem;
 		lasEditMode = _isEditing;
 		
-		_vfd.setCursor( startCursor /*centerX - ((_editString.size()*7) /2 )*/, centerY);
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setCursor( startCursor /*centerX - ((_editString.size()*7) /2 )*/, centerY);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		if(_isEditing && _currentMenuItem < strlen)
 			_editString[_currentMenuItem] = charChoices[_editChoice];
 		
-		_vfd.printPacket("%-18s", _editString.c_str());
+		_vfd->printPacket("%-18s", _editString.c_str());
 		
 		{ // draw cursor
-			_vfd.setCursor( startCursor /*centerX - ((_editString.size()*7) /2 )*/, centerY+8);
+			_vfd->setCursor( startCursor /*centerX - ((_editString.size()*7) /2 )*/, centerY+8);
 			char buf1[20] = {0};
 			for(int i = 0; i < strlen; i++){
 				buf1[i] = (i == _currentMenuItem)? (_isEditing?'\xa0':'\xaf') :' ';
 			}
-			_vfd.printPacket("%-18s", buf1);
+			_vfd->printPacket("%-18s", buf1);
 		}
 		
 		//// debug
-		//		_vfd.setCursor(0, centerY + 10);
-		//		_vfd.printPacket("%2d", _currentMenuItem);
+		//		_vfd->setCursor(0, centerY + 10);
+		//		_vfd->printPacket("%2d", _currentMenuItem);
 		//	//
-		//		_vfd.setCursor(0, centerY + 10);
-		//		_vfd.printPacket("\x1A\x40\x18\x08\x1C\x5C\x48\x3E\x1D\x1D\x14\x36");
+		//		_vfd->setCursor(0, centerY + 10);
+		//		_vfd->printPacket("\x1A\x40\x18\x08\x1C\x5C\x48\x3E\x1D\x1D\x14\x36");
 		
 		
-		_vfd.setCursor(0,height-10);
-		_vfd.printPacket("%s Cancel", _currentMenuItem == strlen? "\xb9":" ");
+		_vfd->setCursor(0,height-10);
+		_vfd->printPacket("%s Cancel", _currentMenuItem == strlen? "\xb9":" ");
 		
-		_vfd.setCursor(0,height);
-		_vfd.printPacket("%s Save", _currentMenuItem == strlen+1? "\xb9":" ");
+		_vfd->setCursor(0,height);
+		_vfd->printPacket("%s Save", _currentMenuItem == strlen+1? "\xb9":" ");
 	}
 	
 	drawTimeBox();
@@ -4290,8 +4290,8 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	GPSmgr*			gps 	= mgr->gps();
 	constexpr int displayedLines = 5;
 	//
-	//	uint8_t width = _vfd.width();
-	//	uint8_t height = _vfd.height();
+	//	uint8_t width = _vfd->width();
+	//	uint8_t height = _vfd->height();
 	//
 	static int lastOffset = 0;
 	static int firstLine = 0;
@@ -4301,7 +4301,7 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	if(transition == TRANS_LEAVING) {
 		
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
 		return;
@@ -4312,10 +4312,10 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	if(transition == TRANS_ENTERING){
 		_rightKnob.setAntiBounce(antiBounceSlow);
 		
-		_vfd.clearScreen();
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.setCursor(0,10);
-		_vfd.write("Waypoints");
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("Waypoints");
 		
 		// safety check
 		if(_lineOffset >=  wps.size())
@@ -4395,14 +4395,14 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
  			rows.push_back(row);
 		}
 		
- 		_vfd.printRows(20, 9, rows, firstLine, displayedLines, VFD::FONT_MINI);
+ 		_vfd->printRows(20, 9, rows, firstLine, displayedLines, VFD::FONT_MINI);
 		
 		if(rows.size() > displayedLines){
 			
 			float bar_height =  (float)(displayedLines +1)/ (float)rows.size() ;
 			float offset =  (float)_lineOffset / ((float)rows.size() -1) ;
 			
-			_vfd.drawScrollBar(11, bar_height ,offset);
+			_vfd->drawScrollBar(11, bar_height ,offset);
 		}
 	}
 	
@@ -4446,21 +4446,21 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 	PiCarMgr*		mgr 	= PiCarMgr::shared();
 	GPSmgr*			gps 	= mgr->gps();
 	
-	uint8_t width = _vfd.width();
-	uint8_t height = _vfd.height();
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
 	
 	uint8_t midX = width/2;
 	static int	last_heading = INT_MAX;
 	
 	if(transition == TRANS_LEAVING) {
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING){
 		_rightKnob.setAntiBounce(antiBounceSlow);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		last_heading = INT_MAX;
 	}
 	
@@ -4474,45 +4474,45 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 		if(name.size() > 12){
 			std::transform(name.begin(), name.end(),name.begin(), ::toupper);
 			name = truncate(name, 22);
-			_vfd.setCursor(0,8);
-			_vfd.setFont(VFD::FONT_MINI);
+			_vfd->setCursor(0,8);
+			_vfd->setFont(VFD::FONT_MINI);
 		}
 		else{
-			_vfd.setCursor(0,10);
-			_vfd.setFont(VFD::FONT_5x7);
+			_vfd->setCursor(0,10);
+			_vfd->setFont(VFD::FONT_5x7);
 		}
 		
-		_vfd.printPacket("%s", name.c_str());
+		_vfd->printPacket("%s", name.c_str());
 		
 		uint8_t col = 0;
 		uint8_t topRow = 22;
 		
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.setCursor(2,topRow);
-		_vfd.printPacket("DISTANCE");
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,topRow);
+		_vfd->printPacket("DISTANCE");
 		
-		_vfd.setCursor(midX+20 ,topRow);
-		_vfd.printPacket("BEARING");
+		_vfd->setCursor(midX+20 ,topRow);
+		_vfd->printPacket("BEARING");
 		
-		_vfd.setFont(VFD::FONT_5x7) ;
+		_vfd->setFont(VFD::FONT_5x7) ;
 		
 		GPSLocation_t here;
 		GPSVelocity_t velocity;
 		if(gps->GetLocation(here) & here.isValid){
 			auto r = GPSmgr::dist_bearing(here,wp.location);
 			
-			_vfd.setCursor(col+10, topRow+10 );
+			_vfd->setCursor(col+10, topRow+10 );
 			
-			_vfd.printPacket("%-9s",  distanceString(r.first * 0.6213711922).c_str());
-			//		_vfd.printPacket("%6.2fmi", r.first * 0.6213711922);
+			_vfd->printPacket("%-9s",  distanceString(r.first * 0.6213711922).c_str());
+			//		_vfd->printPacket("%6.2fmi", r.first * 0.6213711922);
 			
 			int bearing = int(r.second);
 			
 			string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
 			string dir = ordinal[int(floor((bearing / 45) + 0.5)) % 8]  ;
 			
-			_vfd.setCursor(midX+25 ,topRow+10);
-			_vfd.printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
+			_vfd->setCursor(midX+25 ,topRow+10);
+			_vfd->printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
 			
 			int heading = INT_MAX;
 			
@@ -4529,21 +4529,21 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 			}
 			
 			if( heading != INT_MAX){
-				_vfd.setCursor(col+10,topRow+22);
-				_vfd.printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
+				_vfd->setCursor(col+10,topRow+22);
+				_vfd->printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
 			}
 		}
 		
 		string utm = GPSmgr::UTMString(wp.location);
 		vector<string> v = split<string>(utm, " ");
 		
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.setCursor(2,height -10);
-		_vfd.printPacket("UTM:");
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,height -10);
+		_vfd->printPacket("UTM:");
 		
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.setCursor(0, height );
-		_vfd.printPacket(" %-18s", utm.c_str());
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0, height );
+		_vfd->printPacket(" %-18s", utm.c_str());
 	}
 	
 	drawTimeBox();
@@ -4592,14 +4592,14 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 	
 	PiCarMgr*		mgr 	= PiCarMgr::shared();
 	
-	//	uint8_t width = _vfd.width();
-	//	uint8_t height = _vfd.height();
+	//	uint8_t width = _vfd->width();
+	//	uint8_t height = _vfd->height();
 	
-	int centerY = _vfd.height() /2;
+	int centerY = _vfd->height() /2;
 	
 	if(transition == TRANS_LEAVING) {
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		return;
 	}
 	
@@ -4610,13 +4610,13 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 	
 	if(transition == TRANS_ENTERING){
 		_rightKnob.setAntiBounce(antiBounceSlow);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		
-		_vfd.setCursor(0,7);
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.printPacket("CHANNEL INFO");
+		_vfd->setCursor(0,7);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("CHANNEL INFO");
 		
-		_vfd.setFont(VFD::FONT_5x7);
+		_vfd->setFont(VFD::FONT_5x7);
 		
 		constexpr int maxLen = 20;
 		string spaces(maxLen, ' ');
@@ -4629,8 +4629,8 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 			titleStr = portionOfSpaces + titleStr;
 		}
 		
-		_vfd.setCursor(0,centerY-5);
-		_vfd.printPacket("%-21s",titleStr.c_str() );
+		_vfd->setCursor(0,centerY-5);
+		_vfd->printPacket("%-21s",titleStr.c_str() );
 		
 		string channelStr = RadioMgr::modeString(mode) + " "
 		+ RadioMgr::hertz_to_string(freq, 3) + " "
@@ -4638,17 +4638,17 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 		
 		string portionOfSpaces = spaces.substr(0, (maxLen - channelStr.size()) / 2);
 		channelStr = portionOfSpaces + channelStr;
-		_vfd.setCursor(0,centerY+5);
-		_vfd.printPacket("%-21s",channelStr.c_str() );
+		_vfd->setCursor(0,centerY+5);
+		_vfd->printPacket("%-21s",channelStr.c_str() );
 		
-		_vfd.setCursor(0, 60);
-		_vfd.printPacket("           ");
+		_vfd->setCursor(0, 60);
+		_vfd->printPacket("           ");
 		
 		bool isPreset = mgr->isPresetChannel(mode, freq);
 		bool isScanner = mgr->isScannerChannel(mode, freq);
-		_vfd.setCursor(0, 60);
-		_vfd.setFont(VFD::FONT_MINI);
-		_vfd.printPacket("%s %s", isPreset?"PRESET":"", isScanner?"SCANNER":"");
+		_vfd->setCursor(0, 60);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("%s %s", isPreset?"PRESET":"", isScanner?"SCANNER":"");
 	}
 	
 	drawTimeBox();
@@ -4778,7 +4778,7 @@ void DisplayMgr::drawScannerChannels(modeTransition_t transition){
 	if(transition == TRANS_LEAVING) {
 		
 		_rightKnob.setAntiBounce(antiBounceDefault);
-		_vfd.clearScreen();
+		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
 		return;
@@ -4789,10 +4789,10 @@ void DisplayMgr::drawScannerChannels(modeTransition_t transition){
 	if(transition == TRANS_ENTERING){
 		_rightKnob.setAntiBounce(antiBounceSlow);
 		
-		_vfd.clearScreen();
-		_vfd.setFont(VFD::FONT_5x7) ;
-		_vfd.setCursor(0,10);
-		_vfd.write("Scanner");
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("Scanner");
 		
 		// safety check
 		if(_lineOffset >=  channels.size())
@@ -4857,14 +4857,14 @@ void DisplayMgr::drawScannerChannels(modeTransition_t transition){
 			lines.push_back(line);
 		}
 		
-		_vfd.printLines(20, 9, lines, firstLine, displayedLines, VFD::FONT_MINI);
+		_vfd->printLines(20, 9, lines, firstLine, displayedLines, VFD::FONT_MINI);
 		
 		if(lines.size() > displayedLines){
 			
 			float bar_height =  (float)(displayedLines +1)/ (float)lines.size() ;
 			float offset =  (float)_lineOffset / ((float)lines.size() -1) ;
 			
-			_vfd.drawScrollBar(11, bar_height ,offset);
+			_vfd->drawScrollBar(11, bar_height ,offset);
 		}
 		
 	}
@@ -4930,7 +4930,6 @@ bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
 				sprintf(p, "%2d mph",  (int) round(mph));
 				value = string(buffer);
 			}
-				break;
 				
 				
 			case FrameDB::FUEL_TRIM:{
@@ -5164,9 +5163,6 @@ static filter_table_t filter_table[] = {
 	{'core', 'asal'}, // daap.songalbum
 	{'core', 'asar'},	// daap.songartist
 	{'core', 'minm'}, // dmap.itemname
-	//	{'core', 'asgn'}, //  daap.songgenre
-	//	{'core', 'ascp'}, //  daap.daap.songcomposer
-	//	{'core', 'asdk'}, //  daap.daap.songdatakind
 	{'core', 'caps'}, // play status  ( 01/ 02 )
 	
 	{'ssnc', 'mden'}, //  Metadata stream processing end
@@ -5301,3 +5297,26 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	
 	printf("cleanup GPSReader\n");
 }
+
+```
+```cpp
+typedef struct {
+    const char* type;
+    const char* code;
+} filter_table_t;
+
+static filter_table_t filter_table[] = {
+    {"core", "asal"}, // daap.songalbum
+    {"core", "asar"}, // daap.songartist
+    {"core", "minm"}, // dmap.itemname
+    {"core", "caps"}, // play status  ( 01/ 02 )
+
+    {"ssnc", "mden"}, //  Metadata stream processing end
+    {"ssnc", "mdst"}, //  Metadata stream processing start
+
+    {"ssnc", "aend"}, // airplay session end
+    {"ssnc", "abeg"}, // airplay session begin
+
+    {"ssnc", "pbeg"}, // play stream begin.
+    {"ssnc", "pend"}, // play stream end.
+};
