@@ -22,6 +22,11 @@ pkg_check_modules(ALSA REQUIRED alsa)
 # Find RTL-SDR
 pkg_check_modules(RTLSDR REQUIRED librtlsdr)
 
+# Find additional required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(MINMEA REQUIRED libminmea)
+pkg_check_modules(SQLITE3 REQUIRED sqlite3)
+
 set(SOURCES
     src/main.cpp
     src/DisplayMgr.cpp
@@ -72,6 +77,9 @@ target_include_directories(carradio
     ${PIGPIO_INCLUDE_DIRS}
     ${ALSA_INCLUDE_DIRS}
     ${RTLSDR_INCLUDE_DIRS}
+    ${MINMEA_INCLUDE_DIRS}
+    ${SQLITE3_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/lib/dsp  # For DSP filter headers
 )
 
 # Add gpiod library
@@ -87,4 +95,7 @@ target_link_libraries(carradio
     ${ALSA_LIBRARIES}
     ${RTLSDR_LIBRARIES}
     i2c
+    ${MINMEA_LIBRARIES}
+    ${SQLITE3_LIBRARIES}
+    dsp  # For DSP filters
 )
