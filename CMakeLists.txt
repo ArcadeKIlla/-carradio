@@ -16,6 +16,12 @@ if(NOT PIGPIO_FOUND)
     set(PIGPIO_INCLUDE_DIRS "/usr/local/include")
 endif()
 
+# Find ALSA
+pkg_check_modules(ALSA REQUIRED alsa)
+
+# Find RTL-SDR
+pkg_check_modules(RTLSDR REQUIRED librtlsdr)
+
 set(SOURCES
     src/main.cpp
     src/DisplayMgr.cpp
@@ -43,6 +49,14 @@ set(SOURCES
     src/TimeStamp.cpp
     src/RtlSdr.cpp
     src/dbuf.cpp
+    src/VhfDecode.cpp
+    src/FmDecode.cpp
+    src/CANBusMgr.cpp
+    src/DTCcodes.cpp
+    src/Wranger2010.cpp
+    src/GMLAN.cpp
+    src/OBD2.cpp
+    src/DuppaEncoder.cpp
 )
 
 add_executable(carradio ${SOURCES})
@@ -56,8 +70,11 @@ target_include_directories(carradio
     PRIVATE
     src
     ${PIGPIO_INCLUDE_DIRS}
+    ${ALSA_INCLUDE_DIRS}
+    ${RTLSDR_INCLUDE_DIRS}
 )
 
+# Add gpiod library
 find_library(GPIOD_LIBRARY gpiod)
 if(NOT GPIOD_LIBRARY)
     message(FATAL_ERROR "gpiod library not found")
@@ -67,5 +84,7 @@ target_link_libraries(carradio
     PRIVATE
     ${PIGPIO_LIBRARIES}
     ${GPIOD_LIBRARY}
+    ${ALSA_LIBRARIES}
+    ${RTLSDR_LIBRARIES}
     i2c
 )
