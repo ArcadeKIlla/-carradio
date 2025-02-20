@@ -1,5 +1,5 @@
 #include "RotaryEncoder.hpp"
-#include <wiringPi.h>
+#include <pigpio.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -20,20 +20,20 @@ RotaryEncoder::~RotaryEncoder() {
 }
 
 bool RotaryEncoder::begin() {
-    // Initialize WiringPi
-    if (wiringPiSetupGpio() == -1) {
-        printf("Failed to initialize WiringPi\n");
+    // Initialize pigpio
+    if (gpioInitialise() < 0) {
+        printf("Failed to initialize pigpio\n");
         return false;
     }
 
     // Set up pins
-    pinMode(_clkPin, INPUT);
-    pinMode(_dtPin, INPUT);
-    pinMode(_swPin, INPUT);
+    gpioSetMode(_clkPin, PI_INPUT);
+    gpioSetMode(_dtPin, PI_INPUT);
+    gpioSetMode(_swPin, PI_INPUT);
     
-    pullUpDnControl(_clkPin, PUD_UP);
-    pullUpDnControl(_dtPin, PUD_UP);
-    pullUpDnControl(_swPin, PUD_UP);
+    gpioSetPullUpDown(_clkPin, PI_PUD_UP);
+    gpioSetPullUpDown(_dtPin, PI_PUD_UP);
+    gpioSetPullUpDown(_swPin, PI_PUD_UP);
 
     // Start monitoring thread
     _running = true;
@@ -49,6 +49,7 @@ void RotaryEncoder::stop() {
     if (_running) {
         _running = false;
         pthread_join(_threadId, NULL);
+        gpioTerminate();
     }
 }
 
@@ -79,17 +80,17 @@ void RotaryEncoder::setLongPressMs(uint32_t ms) {
 void* RotaryEncoder::encoderThread(void* arg) {
     RotaryEncoder* encoder = static_cast<RotaryEncoder*>(arg);
     
-    int lastClk = digitalRead(encoder->_clkPin);
-    int lastBtn = digitalRead(encoder->_swPin);
+    int lastClk = gpioRead(encoder->_clkPin);
+    int lastBtn = gpioRead(encoder->_swPin);
     uint32_t btnPressTime = 0;
     bool longPressSent = false;
 
     while (encoder->_running) {
         // Handle rotation
-        int clk = digitalRead(encoder->_clkPin);
+        int clk = gpioRead(encoder->_clkPin);
         if (clk != lastClk) {
             delay(encoder->_debounceMs);  // Simple debounce
-            int dt = digitalRead(encoder->_dtPin);
+            int dt = gpioRead(encoder->_dtPin);
             
             if (clk != lastClk) {  // Make sure it wasn't a bounce
                 if (dt != clk) {
@@ -106,15 +107,15 @@ void* RotaryEncoder::encoderThread(void* arg) {
         }
 
         // Handle button
-        int btn = digitalRead(encoder->_swPin);
+        int btn = gpioRead(encoder->_swPin);
         if (btn != lastBtn) {
             delay(encoder->_debounceMs);  // Simple debounce
-            btn = digitalRead(encoder->_swPin);
+            btn = gpioRead(encoder->_swPin);
             
             if (btn != lastBtn) {  // Make sure it wasn't a bounce
                 if (btn == LOW) {  // Button pressed
                     encoder->_buttonPressed = true;
-                    btnPressTime = millis();
+                    btnPressTime = time(NULL);
                     longPressSent = false;
                     if (encoder->_pressCallback)
                         encoder->_pressCallback();
@@ -129,7 +130,7 @@ void* RotaryEncoder::encoderThread(void* arg) {
 
         // Handle long press
         if (encoder->_buttonPressed && !longPressSent) {
-            if (millis() - btnPressTime >= encoder->_longPressMs) {
+            if (time(NULL) - btnPressTime >= encoder->_longPressMs / 1000) {
                 if (encoder->_longPressCallback)
                     encoder->_longPressCallback();
                 longPressSent = true;
