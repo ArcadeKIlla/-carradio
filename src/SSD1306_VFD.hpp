@@ -33,7 +33,7 @@ public:
         return true;
     }
 
-    bool init() override {
+    bool init() {
         if (!_oled.begin()) {
             return false;
         }
