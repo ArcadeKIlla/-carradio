@@ -22,7 +22,6 @@ set(SOURCES
     src/RotaryEncoder.cpp
     src/SSD1306.cpp
     src/SSD1306_LCD.cpp
-    src/DisplayTest.cpp
 )
 
 add_executable(carradio ${SOURCES})
