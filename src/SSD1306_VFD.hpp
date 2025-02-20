@@ -7,13 +7,17 @@
 #include <stdarg.h>
 #include <algorithm>
 
+// Define OLED display constants
+#define SSD1306_WHITE 1
+#define SSD1306_BLACK 0
+
 // Adapter class that makes SSD1306 OLED look like a VFD to DisplayMgr
 class SSD1306_VFD : public VFD {
 public:
     SSD1306_VFD(uint8_t i2cAddress = SSD1306::DEFAULT_I2C_ADDRESS) 
         : _oled(i2cAddress), _currentFont(FONT_MINI) {}
     
-    ~SSD1306_VFD() {
+    ~SSD1306_VFD() override {
         stop();
     }
 
@@ -123,31 +127,6 @@ public:
         return true;
     }
 
-    // Helper methods for font dimensions
-    uint8_t getCurrentFontWidth() const {
-        switch(_currentFont) {
-            case FONT_MINI:
-            case FONT_5x7:
-                return 6;  // 6 pixels wide at size 1
-            case FONT_10x14:
-                return 12; // 12 pixels wide at size 2
-            default:
-                return 6;
-        }
-    }
-
-    uint8_t getCurrentFontHeight() const {
-        switch(_currentFont) {
-            case FONT_MINI:
-            case FONT_5x7:
-                return 8;  // 8 pixels high at size 1
-            case FONT_10x14:
-                return 16; // 16 pixels high at size 2
-            default:
-                return 8;
-        }
-    }
-
     bool printLines(uint8_t y, uint8_t step, stringvector lines,
                    uint8_t firstLine, uint8_t maxLines,
                    VFD::font_t font = VFD::FONT_MINI) override {
@@ -157,7 +136,8 @@ public:
         uint8_t lineHeight = getCurrentFontHeight();
         
         // Calculate actual number of lines to display
-        uint8_t numLines = min(maxLines, (uint8_t)lines.size() - firstLine);
+        size_t availableLines = lines.size() - firstLine;
+        uint8_t numLines = static_cast<uint8_t>(std::min(static_cast<size_t>(maxLines), availableLines));
         
         for (uint8_t i = 0; i < numLines; i++) {
             // Use step if provided, otherwise use font height
@@ -180,7 +160,8 @@ public:
         uint8_t lineHeight = getCurrentFontHeight();
         
         // Calculate actual number of lines to display
-        uint8_t numLines = min(maxLines, (uint8_t)columns[0].size() - firstLine);
+        size_t availableLines = columns[0].size() - firstLine;
+        uint8_t numLines = static_cast<uint8_t>(std::min(static_cast<size_t>(maxLines), availableLines));
         
         for (uint8_t line = 0; line < numLines; line++) {
             uint8_t x = x_offset;
@@ -216,19 +197,18 @@ public:
         uint8_t y_start = top + static_cast<uint8_t>(starting_offset * (DISPLAY_HEIGHT - actual_height));
         
         // Ensure scroll bar stays within display bounds
-        y_start = min(max(y_start, top), static_cast<uint8_t>(DISPLAY_HEIGHT - actual_height));
-        actual_height = min(actual_height, static_cast<uint8_t>(DISPLAY_HEIGHT - y_start));
+        y_start = std::min(std::max(y_start, top), static_cast<uint8_t>(DISPLAY_HEIGHT - actual_height));
+        actual_height = std::min(actual_height, static_cast<uint8_t>(DISPLAY_HEIGHT - y_start));
 
         // Draw scroll bar background (outline)
         _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, SSD1306_WHITE);
         
         // Draw scroll bar handle (filled)
-        _oled.fillRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
+        _oled.drawRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
         
         _oled.display();
     }
 
-    // Override width() and height() to match OLED display dimensions
     uint16_t width() override {
         return 128; // SSD1306 is 128 pixels wide
     }
@@ -240,4 +220,29 @@ public:
 private:
     SSD1306 _oled;
     font_t _currentFont;
+
+    // Helper methods for font dimensions
+    uint8_t getCurrentFontWidth() const {
+        switch(_currentFont) {
+            case FONT_MINI:
+            case FONT_5x7:
+                return 6;  // 6 pixels wide at size 1
+            case FONT_10x14:
+                return 12; // 12 pixels wide at size 2
+            default:
+                return 6;
+        }
+    }
+
+    uint8_t getCurrentFontHeight() const {
+        switch(_currentFont) {
+            case FONT_MINI:
+            case FONT_5x7:
+                return 8;  // 8 pixels high at size 1
+            case FONT_10x14:
+                return 16; // 16 pixels high at size 2
+            default:
+                return 8;
+        }
+    }
 };

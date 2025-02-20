@@ -17,7 +17,6 @@
 #include <string>
 #include "CommonDefs.hpp"
 
-
 //#define GU128x64D  1
 #define GU128x64D  1
 
@@ -44,39 +43,39 @@ public:
  	}font_t;
 
 	VFD();
-  ~VFD();
+	virtual ~VFD();
 	
-  bool begin(const char* path, speed_t speed =  B19200);		// alwsys uses a fixed address
-  bool begin(const char* path, speed_t speed, int &error);
-  void stop();
+	virtual bool begin(const char* path, speed_t speed =  B19200);		// alwsys uses a fixed address
+	virtual bool begin(const char* path, speed_t speed, int &error);
+	virtual void stop();
 
- 	bool reset();
+	virtual bool reset();
  
-	bool write(string str);
-	bool write(const char* str);
-	bool writePacket(const uint8_t *data , size_t len , useconds_t waitusec = 50);
+	virtual bool write(string str);
+	virtual bool write(const char* str);
+	virtual bool writePacket(const uint8_t *data , size_t len , useconds_t waitusec = 50);
 
-	bool printPacket(const char *fmt, ...);
+	virtual bool printPacket(const char *fmt, ...);
 	
-	bool printLines(uint8_t y, uint8_t step, stringvector lines,
+	virtual bool printLines(uint8_t y, uint8_t step, stringvector lines,
 						 uint8_t firstLine,  uint8_t maxLines,
 						 VFD::font_t font = VFD::FONT_MINI );
 
-	bool printRows(uint8_t y, uint8_t step, vector<vector <string>> columns,
+	virtual bool printRows(uint8_t y, uint8_t step, vector<vector <string>> columns,
 							uint8_t firstLine,  uint8_t maxLines, uint8_t x_offset = 0,
 								VFD::font_t font = VFD::FONT_MINI );
 
-	bool setBrightness(uint8_t);  //  0 == off - 7 == max
-	bool setPowerOn(bool setOn);
+	virtual bool setBrightness(uint8_t);  //  0 == off - 7 == max
+	virtual bool setPowerOn(bool setOn);
 	
-	bool clearScreen();
+	virtual bool clearScreen();
 	
-	void drawScrollBar(uint8_t top, float bar_height,  float starting_offset);
+	virtual void drawScrollBar(uint8_t top, float bar_height,  float starting_offset);
  
-	bool setCursor(uint8_t x, uint8_t y);
-	bool setFont(font_t font);
+	virtual bool setCursor(uint8_t x, uint8_t y);
+	virtual bool setFont(font_t font);
 
-	inline uint16_t width() {
+	virtual inline uint16_t width() {
 #if GU126x64F
 	 		return 126;
 #elif GU128x64D
@@ -84,7 +83,7 @@ public:
 #endif
  	};
 	
-	inline uint16_t height() {
+	virtual inline uint16_t height() {
 #if GU126x64F
 			return 64;
 #elif GU128x64D
