@@ -89,13 +89,13 @@ void* RotaryEncoder::encoderThread(void* arg) {
         // Handle rotation
         int clk = gpioRead(encoder->_clkPin);
         if (clk != lastClk) {
-            delay(encoder->_debounceMs);  // Simple debounce
+            time_sleep(encoder->_debounceMs / 1000.0);  // Simple debounce
             int dt = gpioRead(encoder->_dtPin);
             
             if (clk != lastClk) {  // Make sure it wasn't a bounce
                 if (dt != clk) {
                     encoder->_position++;
-                    if (encoder->_rotateCallback) 
+                    if (encoder->_rotateCallback)
                         encoder->_rotateCallback(1);
                 } else {
                     encoder->_position--;
@@ -109,11 +109,11 @@ void* RotaryEncoder::encoderThread(void* arg) {
         // Handle button
         int btn = gpioRead(encoder->_swPin);
         if (btn != lastBtn) {
-            delay(encoder->_debounceMs);  // Simple debounce
+            time_sleep(encoder->_debounceMs / 1000.0);  // Simple debounce
             btn = gpioRead(encoder->_swPin);
             
             if (btn != lastBtn) {  // Make sure it wasn't a bounce
-                if (btn == LOW) {  // Button pressed
+                if (btn == 0) {  // Button pressed (0 = LOW in pigpio)
                     encoder->_buttonPressed = true;
                     btnPressTime = time(NULL);
                     longPressSent = false;
@@ -124,8 +124,8 @@ void* RotaryEncoder::encoderThread(void* arg) {
                     if (encoder->_releaseCallback)
                         encoder->_releaseCallback();
                 }
-                lastBtn = btn;
             }
+            lastBtn = btn;
         }
 
         // Handle long press
@@ -137,7 +137,7 @@ void* RotaryEncoder::encoderThread(void* arg) {
             }
         }
 
-        delay(1);  // Don't hog the CPU
+        time_sleep(0.001);  // Don't hog the CPU (1ms sleep)
     }
 
     return NULL;
