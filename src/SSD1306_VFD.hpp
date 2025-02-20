@@ -83,10 +83,19 @@ public:
         return result;
     }
 
-    bool clearScreen() override {
-        _oled.clearDisplay();
+    void clear() override {
+        _oled.clear();
         _oled.display();
-        return true;
+    }
+
+    void clearScreen() override {
+        _oled.clear();
+        _oled.display();
+    }
+
+    void clearLine(uint8_t line) override {
+        _oled.clear();
+        _oled.display();
     }
 
     bool setCursor(uint8_t x, uint8_t y) override {
@@ -180,17 +189,30 @@ public:
         return true;
     }
 
-    virtual void drawScrollBar(uint8_t x_start, float bar_height, float offset) override {
-        const uint8_t SCROLL_BAR_WIDTH = 4;
-        uint8_t y_start = static_cast<uint8_t>(offset * height());
-        uint8_t actual_height = static_cast<uint8_t>(bar_height * height());
+    void drawScrollBar(uint16_t total_items, uint16_t visible_items, uint16_t first_visible_item) {
+        if (total_items <= visible_items) {
+            return;
+        }
 
-        // Draw outline
-        _oled.drawRoundRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, 1, SSD1306_WHITE);
+        const uint16_t x_start = SSD1306::DISPLAY_WIDTH - SCROLL_BAR_WIDTH - 1;
+        _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, SSD1306::DISPLAY_HEIGHT, SSD1306_WHITE);
 
-        // Draw filled portion
+        // Calculate scroll bar position and size
+        float ratio = static_cast<float>(visible_items) / total_items;
+        float position = static_cast<float>(first_visible_item) / total_items;
+        
+        uint16_t actual_height = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * ratio);
+        uint16_t y_start = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * position);
+
+        // Ensure minimum height
+        if (actual_height < 2) actual_height = 2;
+
+        // Ensure it doesn't go off screen
+        if (y_start + actual_height > SSD1306::DISPLAY_HEIGHT) {
+            y_start = SSD1306::DISPLAY_HEIGHT - actual_height;
+        }
+
         _oled.fillRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
-        _oled.display();
     }
 
     uint16_t width() override {
