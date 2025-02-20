@@ -7,7 +7,14 @@ project(carradio)
 
 # Find required packages
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(PIGPIO REQUIRED pigpio)
+
+# Try pkg-config first, but fall back to manual paths if not found
+pkg_check_modules(PIGPIO pigpio)
+if(NOT PIGPIO_FOUND)
+    message(STATUS "pigpio not found via pkg-config, using default paths")
+    set(PIGPIO_LIBRARIES "pigpio")
+    set(PIGPIO_INCLUDE_DIRS "/usr/local/include")
+endif()
 
 set(SOURCES
     src/DisplayMgr.cpp
