@@ -83,17 +83,18 @@ public:
         return result;
     }
 
-    void clear() override {
+    void clear() {
         _oled.clear();
         _oled.display();
     }
 
-    void clearScreen() override {
+    bool clearScreen() override {
         _oled.clear();
         _oled.display();
+        return true;
     }
 
-    void clearLine(uint8_t line) override {
+    void clearLine(uint8_t line) {
         _oled.clear();
         _oled.display();
     }
@@ -189,20 +190,20 @@ public:
         return true;
     }
 
-    void drawScrollBar(uint16_t total_items, uint16_t visible_items, uint16_t first_visible_item) {
-        if (total_items <= visible_items) {
+    void drawScrollBar(uint8_t top, float bar_height, float starting_offset) override {
+        if (bar_height <= 0.0f) {
             return;
         }
 
         const uint16_t x_start = SSD1306::DISPLAY_WIDTH - SCROLL_BAR_WIDTH - 1;
-        _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, SSD1306::DISPLAY_HEIGHT, SSD1306_WHITE);
+        
+        // Draw outline
+        _oled.drawLine(x_start, 0, x_start, SSD1306::DISPLAY_HEIGHT - 1, SSD1306_WHITE);
+        _oled.drawLine(x_start + SCROLL_BAR_WIDTH, 0, x_start + SCROLL_BAR_WIDTH, SSD1306::DISPLAY_HEIGHT - 1, SSD1306_WHITE);
 
         // Calculate scroll bar position and size
-        float ratio = static_cast<float>(visible_items) / total_items;
-        float position = static_cast<float>(first_visible_item) / total_items;
-        
-        uint16_t actual_height = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * ratio);
-        uint16_t y_start = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * position);
+        uint16_t actual_height = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * bar_height);
+        uint16_t y_start = static_cast<uint16_t>(SSD1306::DISPLAY_HEIGHT * starting_offset);
 
         // Ensure minimum height
         if (actual_height < 2) actual_height = 2;
@@ -212,7 +213,11 @@ public:
             y_start = SSD1306::DISPLAY_HEIGHT - actual_height;
         }
 
-        _oled.fillRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
+        // Draw filled portion
+        for (uint16_t y = y_start; y < y_start + actual_height; y++) {
+            _oled.drawLine(x_start, y, x_start + SCROLL_BAR_WIDTH, y, SSD1306_WHITE);
+        }
+        _oled.display();
     }
 
     uint16_t width() override {
@@ -224,7 +229,8 @@ public:
     }
 
 private:
-    SSD1306 _oled;
+    static const uint8_t SCROLL_BAR_WIDTH = 4;
+    SSD1306& _oled;
     font_t _currentFont;
 
     // Helper methods for font dimensions
