@@ -1952,9 +1952,9 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 			string str = "OFF";
 			auto textCenter =  centerX - (str.size() * 11);
 			
-			TRY(_vfd->setFont(VFD::FONT_10x14));
-			TRY(_vfd->setCursor( textCenter ,centerY+10));
-			TRY(_vfd->write(str));
+			_vfd->setFont(VFD::FONT_10x14);
+			_vfd->setCursor( textCenter ,centerY+10);
+			_vfd->write(str);
 		}
 		else {
 			uint32_t  freq =  radio->frequency();
@@ -1970,9 +1970,9 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 				string str = "AUX";
 				auto freqCenter =  centerX  -( (str.size() /2)  * 11) - 7 ;
 				
-				TRY(_vfd->setFont(VFD::FONT_10x14));
-				TRY(_vfd->setCursor( freqCenter ,centerY+10));
-				TRY(_vfd->write(str));
+				_vfd->setFont(VFD::FONT_10x14);
+				_vfd->setCursor( freqCenter ,centerY+10);
+				_vfd->write(str);
 			}
 			else if(mode == RadioMgr::AIRPLAY){
 				
@@ -2090,8 +2090,8 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					int offset  = (titleMaxSize /2) - (titleLen/2);
 					memcpy( titlebuff+offset , title.c_str(), titleLen );
 				};
-				TRY(_vfd->setCursor( titleStart ,titleBottom ));
-				TRY(_vfd->write( titlebuff));
+				_vfd->setCursor( titleStart ,titleBottom );
+				_vfd->write( titlebuff);
 				
 			}
 			_vfd->setCursor(0, 60);
@@ -3186,32 +3186,35 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 		_vfd->writePacket(buff1, sizeof(buff1), 0);
 	}
 	
-	// brightness scales between 0 - 1.0
-	float dim =  mgr->dimLevel();
-	uint8_t itemX = leftbox +  (rightbox - leftbox) * dim;
-	
-	// clear rest of inside of box
-	if(dim < 1)
-	{
-		// there is some kind of bug in the Noritake VFD where id you send
-		// VFD_CLEAR_AREA  followed by a 0x60, it screws up the display
-		uint8_t start = itemX+1;
+	// avoid doing a needless refresh.  if this was a timeout event,  then just update the time
+	if(transition == TRANS_ENTERING || transition == TRANS_REFRESH){
 		
-		uint8_t buff2[] = {
-			VFD::VFD_CLEAR_AREA,
-			// static_cast<uint8_t>(itemX+1),  static_cast<uint8_t> (topbox+1),
-			static_cast<uint8_t>(start),  static_cast<uint8_t> (topbox+1),
-			static_cast<uint8_t> (rightbox-1),static_cast<uint8_t> (bottombox-1)};
+		float dim =  mgr->dimLevel();
+		uint8_t itemX = leftbox +  (rightbox - leftbox) * dim;
 		
-		_vfd->writePacket(buff2, sizeof(buff2), 1000);
+		// clear rest of inside of box
+		if(dim < 1)
+		{
+			// there is some kind of bug in the Noritake VFD where id you send
+			// VFD_CLEAR_AREA  followed by a 0x60, it screws up the display
+			uint8_t start = itemX+1;
+			
+			uint8_t buff2[] = {
+				VFD::VFD_CLEAR_AREA,
+				// static_cast<uint8_t>(itemX+1),  static_cast<uint8_t> (topbox+1),
+				static_cast<uint8_t>(start),  static_cast<uint8_t> (topbox+1),
+				static_cast<uint8_t> (rightbox-1),static_cast<uint8_t> (bottombox-1)};
+			
+			_vfd->writePacket(buff2, sizeof(buff2), 1000);
+		}
+		
+		// fill  area box
+		uint8_t buff3[] = {VFD::VFD_SET_AREA,
+			static_cast<uint8_t>(leftbox), static_cast<uint8_t> (topbox+1),
+			static_cast<uint8_t>(itemX),static_cast<uint8_t>(bottombox-1) };
+		_vfd->writePacket(buff3, sizeof(buff3), 1000);
+		
 	}
-	
-	// fill  area box
-	uint8_t buff3[] = {VFD::VFD_SET_AREA,
-		static_cast<uint8_t>(leftbox), static_cast<uint8_t> (topbox+1),
-		static_cast<uint8_t>(itemX),static_cast<uint8_t>(bottombox-1) };
-	_vfd->writePacket(buff3, sizeof(buff3), 1000);
-	
 }
 
 bool DisplayMgr::processSelectorKnobActionForDimmer( knob_action_t action){
@@ -3258,7 +3261,7 @@ bool DisplayMgr::processSelectorKnobActionForDimmer( knob_action_t action){
 }
 
 
-// MARK: - Selection Silder Screen
+// MARK: -  Selection Silder Screen
 void DisplayMgr::showSelectionSilderScreen(
 							 string title,
 							 std::vector<string> choices,
@@ -5159,7 +5162,7 @@ typedef struct {
 	uint32_t code;
 } filter_table_t;
 
-static filter_table_t filter_table[] = {
+static const filter_table_t filter_table[] = {
 	{'core', 'asal'}, // daap.songalbum
 	{'core', 'asar'},	// daap.songartist
 	{'core', 'minm'}, // dmap.itemname
@@ -5297,26 +5300,3 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	
 	printf("cleanup GPSReader\n");
 }
-
-```
-```cpp
-typedef struct {
-    const char* type;
-    const char* code;
-} filter_table_t;
-
-static filter_table_t filter_table[] = {
-    {"core", "asal"}, // daap.songalbum
-    {"core", "asar"}, // daap.songartist
-    {"core", "minm"}, // dmap.itemname
-    {"core", "caps"}, // play status  ( 01/ 02 )
-
-    {"ssnc", "mden"}, //  Metadata stream processing end
-    {"ssnc", "mdst"}, //  Metadata stream processing start
-
-    {"ssnc", "aend"}, // airplay session end
-    {"ssnc", "abeg"}, // airplay session begin
-
-    {"ssnc", "pbeg"}, // play stream begin.
-    {"ssnc", "pend"}, // play stream end.
-};

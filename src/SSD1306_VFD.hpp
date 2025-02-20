@@ -35,28 +35,27 @@ public:
     }
 
     void stop() override {
-        _oled.clear();
+        _oled.clearDisplay();
         _oled.display();
     }
 
     bool reset() override {
-        _oled.clear();
+        _oled.clearDisplay();
         _oled.display();
         return true;
     }
 
-    bool clear() override {
-        _oled.clear();
+    bool clear() {
+        _oled.clearDisplay();
         _oled.display();
         return true;
     }
 
-    bool setLine(int line, const string& str) override {
+    bool setLine(int line, const string& str) {
         // Convert VFD line position to OLED coordinates
         // Assuming 8 pixel high characters and 2 lines
         _oled.setCursor(0, line * 8);
-        _oled.print(str);
-        _oled.display();
+        write(str);
         return true;
     }
 
@@ -185,27 +184,16 @@ public:
         return true;
     }
 
-    void drawScrollBar(uint8_t top, float bar_height, float starting_offset) override {
-        // Constants for scroll bar appearance
-        const uint8_t SCROLL_BAR_WIDTH = VFD::scroll_bar_width;
-        const uint8_t DISPLAY_WIDTH = width();
-        const uint8_t DISPLAY_HEIGHT = height();
-        
-        // Calculate scroll bar position
-        uint8_t x_start = DISPLAY_WIDTH - SCROLL_BAR_WIDTH;
-        uint8_t actual_height = static_cast<uint8_t>(bar_height * DISPLAY_HEIGHT);
-        uint8_t y_start = top + static_cast<uint8_t>(starting_offset * (DISPLAY_HEIGHT - actual_height));
-        
-        // Ensure scroll bar stays within display bounds
-        y_start = std::min(std::max(y_start, top), static_cast<uint8_t>(DISPLAY_HEIGHT - actual_height));
-        actual_height = std::min(actual_height, static_cast<uint8_t>(DISPLAY_HEIGHT - y_start));
+    virtual void drawScrollBar(uint8_t x_start, float bar_height, float offset) override {
+        const uint8_t SCROLL_BAR_WIDTH = 4;
+        uint8_t y_start = static_cast<uint8_t>(offset * height());
+        uint8_t actual_height = static_cast<uint8_t>(bar_height * height());
 
-        // Draw scroll bar background (outline)
-        _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, SSD1306_WHITE);
-        
-        // Draw scroll bar handle (filled)
-        _oled.drawRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
-        
+        // Draw outline (not filled)
+        _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, false, SSD1306_WHITE);
+
+        // Draw filled portion
+        _oled.drawRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, false, SSD1306_WHITE);
         _oled.display();
     }
 
