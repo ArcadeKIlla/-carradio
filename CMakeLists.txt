@@ -5,6 +5,10 @@ set(CMAKE_CXX_FLAGS "-Wall -std=c++17 -O2 -ffast-math -ftree-vectorize ${EXTRA_F
 cmake_minimum_required(VERSION 3.0)
 project(carradio)
 
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PIGPIO REQUIRED pigpio)
+
 set(SOURCES
     src/DisplayMgr.cpp
     src/I2C.cpp
@@ -21,13 +25,14 @@ set_target_properties(carradio PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
-target_link_libraries(carradio
-    PRIVATE
-    wiringPi
-    i2c
-)
-
 target_include_directories(carradio
     PRIVATE
     src
+    ${PIGPIO_INCLUDE_DIRS}
+)
+
+target_link_libraries(carradio
+    PRIVATE
+    ${PIGPIO_LIBRARIES}
+    i2c
 )
