@@ -4,10 +4,8 @@
 #include <vector>
 #include <functional>
 #include <memory>
-#include "RotaryEncoder.hpp"
 #include "SSD1306_LCD.hpp"
-#include "RadioMgr.hpp"
-#include "RGB.hpp"
+#include "RotaryEncoder.hpp"
 
 using namespace std;
 
@@ -82,7 +80,6 @@ public:
     // display related
     bool setBrightness(double level);   // 0.0 -  1.0
     bool setKnobBackLight(bool isOn);
-    bool setKnobColor(knob_id_t, RGB);
 
     // Display functions
     void showTime();

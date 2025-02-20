@@ -8,14 +8,10 @@ constexpr uint8_t ENCODER_CLK_PIN = 2;
 constexpr uint8_t ENCODER_DT_PIN = 3;
 constexpr uint8_t ENCODER_SW_PIN = 4;
 
-// OLED display address
-constexpr uint8_t displayAddress = 0x3C;
-
 DisplayMgr::DisplayMgr() 
-    : _display(new SSD1306_LCD(displayAddress)),
+    : _display(new SSD1306_LCD()),
       _encoder(new RotaryEncoder(ENCODER_CLK_PIN, ENCODER_DT_PIN, ENCODER_SW_PIN)),
-      _mode(MODE_UNKNOWN),
-      _shouldAutoPlay(false) {
+      _mode(MODE_UNKNOWN) {
 }
 
 DisplayMgr::~DisplayMgr() {
@@ -66,38 +62,55 @@ void DisplayMgr::stop() {
         _encoder->stop();
     }
     _mode = MODE_UNKNOWN;
-    clearDisplay();
+    clear();
 }
 
-bool DisplayMgr::reset() {
-    clearDisplay();
-    _mode = MODE_STARTUP;
-    showStartup();
-    return true;
-}
-
-void DisplayMgr::clearDisplay() {
+void DisplayMgr::clear() {
     _display->clear();
+    _line1.clear();
+    _line2.clear();
+    update();
 }
 
-void DisplayMgr::updateDisplay() {
+void DisplayMgr::setLine1(const std::string& text) {
+    _line1 = text;
+    _display->setCursor(0, 0);
+    _display->print(text.c_str());
+}
+
+void DisplayMgr::setLine2(const std::string& text) {
+    _line2 = text;
+    _display->setCursor(0, 1);
+    _display->print(text.c_str());
+}
+
+void DisplayMgr::update() {
     _display->display();
 }
 
-bool DisplayMgr::setBrightness(double level) {
-    // OLED doesn't support brightness directly
-    // Could implement using contrast
-    return true;
+void DisplayMgr::showStartup() {
+    clear();
+    setLine1("Car Radio");
+    setLine2("Starting...");
+    update();
 }
 
-bool DisplayMgr::setKnobBackLight(bool isOn) {
-    // Implement knob backlight control
-    return true;
+void DisplayMgr::showInfo() {
+    clear();
+    setLine1("Info Screen");
+    update();
 }
 
-bool DisplayMgr::setKnobColor(knob_id_t knob, RGB color) {
-    // Implement knob LED color control
-    return true;
+void DisplayMgr::showRadio() {
+    clear();
+    setLine1("Radio Mode");
+    update();
+}
+
+void DisplayMgr::showScanner() {
+    clear();
+    setLine1("Scanner Mode");
+    update();
 }
 
 void DisplayMgr::showTime() {
@@ -111,22 +124,6 @@ void DisplayMgr::showMessage(string message, time_t timeout, voidCallback_t cb) 
     clearDisplay();
     _display->setCursor(0, 0);
     _display->print(message);
-    updateDisplay();
-}
-
-void DisplayMgr::showStartup() {
-    clearDisplay();
-    _display->setCursor(0, 0);
-    _display->print("Car Radio");
-    _display->setCursor(0, 1);
-    _display->print("Starting...");
-    updateDisplay();
-}
-
-void DisplayMgr::showInfo(time_t timeout) {
-    clearDisplay();
-    _display->setCursor(0, 0);
-    _display->print("Info Screen");
     updateDisplay();
 }
 
