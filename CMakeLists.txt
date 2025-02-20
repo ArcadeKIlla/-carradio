@@ -31,8 +31,18 @@ set(MINMEA_SOURCES
     lib/minmea/minmea.c
 )
 
+# Add DSP filter source files
+set(DSP_SOURCES
+    lib/dsp/FineTuner.cpp
+    lib/dsp/LowPassFilterFirIQ.cpp
+    lib/dsp/DownsampleFilter.cpp
+    lib/dsp/HighPassFilterIir.cpp
+    lib/dsp/LowPassFilterRC.cpp
+)
+
 set(SOURCES
     ${MINMEA_SOURCES}
+    ${DSP_SOURCES}
     src/main.cpp
     src/DisplayMgr.cpp
     src/I2C.cpp
@@ -96,11 +106,10 @@ endif()
 target_link_libraries(carradio
     PRIVATE
     ${PIGPIO_LIBRARIES}
-    ${GPIOD_LIBRARY}
+    gpiod
     ${ALSA_LIBRARIES}
     ${RTLSDR_LIBRARIES}
     i2c
     ${SQLITE3_LIBRARIES}
-    dsp  # For DSP filters
     m  # Math library for DSP
 )
