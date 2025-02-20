@@ -6,6 +6,7 @@
 #define SSD1306_MEMORYMODE 0x20
 #define SSD1306_COLUMNADDR 0x21
 #define SSD1306_PAGEADDR 0x22
+#define SSD1306_SETSTARTLINE 0x40
 #define SSD1306_SETCONTRAST 0x81
 #define SSD1306_CHARGEPUMP 0x8D
 #define SSD1306_SEGREMAP 0xA0
@@ -15,6 +16,7 @@
 #define SSD1306_SETMULTIPLEX 0xA8
 #define SSD1306_DISPLAYOFF 0xAE
 #define SSD1306_DISPLAYON 0xAF
+#define SSD1306_COMSCANINC 0xC0
 #define SSD1306_COMSCANDEC 0xC8
 #define SSD1306_SETDISPLAYOFFSET 0xD3
 #define SSD1306_SETDISPLAYCLOCKDIV 0xD5
@@ -109,12 +111,20 @@ void SSD1306::setTextSize(uint8_t size) {
 }
 
 void SSD1306::print(const std::string& text) {
+    // Simple implementation - just draw pixels for each character
+    // This should be enhanced with proper font rendering
     for (char c : text) {
-        // Basic character drawing - implement font rendering here
-        // This is a simplified version - you'll want to add proper font support
-        drawRect(_cursorX, _cursorY, 5 * _textSize, 7 * _textSize, true, true);
+        // Skip non-printable characters
+        if (c < 32 || c > 127)
+            continue;
+
+        // Draw character (placeholder implementation)
+        // TODO: Implement proper font rendering
+        drawRect(_cursorX, _cursorY, 6, 8, false, true);
+        
+        // Move cursor
         _cursorX += 6 * _textSize;
-        if (_cursorX > DISPLAY_WIDTH - 6 * _textSize) {
+        if (_cursorX > DISPLAY_WIDTH - 6) {
             _cursorX = 0;
             _cursorY += 8 * _textSize;
         }
