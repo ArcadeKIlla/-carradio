@@ -3429,7 +3429,7 @@ void DisplayMgr::showSliderScreen(
 	cbInfo->right_text = right_text;
 	cbInfo->left_text = left_text;
 	cbInfo->timeout = timeout?timeout:5;  // default 5 secs
-	cbInfo->getCB = getterCB;
+ 	cbInfo->getCB = getterCB;
 	cbInfo->setCB = setterCB;
 	cbInfo->doneCB = doneCB;
 	
@@ -4494,7 +4494,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 		_vfd->setCursor(2,topRow);
 		_vfd->printPacket("DISTANCE");
 		
-		_vfd->setCursor(midX+20 ,topRow);
+		_vfd->setCursor(midX +20, topRow);
 		_vfd->printPacket("BEARING");
 		
 		_vfd->setFont(VFD::FONT_5x7) ;
@@ -4514,7 +4514,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 			string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
 			string dir = ordinal[int(floor((bearing / 45) + 0.5)) % 8]  ;
 			
-			_vfd->setCursor(midX+25 ,topRow+10);
+			_vfd->setCursor(midX +25 ,topRow+10);
 			_vfd->printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
 			
 			int heading = INT_MAX;
@@ -5301,5 +5301,3 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	
 	printf("cleanup GPSReader\n");
 }
-```
-```cpp
