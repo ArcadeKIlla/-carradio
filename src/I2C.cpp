@@ -1,146 +1,409 @@
+//
+//  I2C.cpp
+//  coopMgr
+//
+//  Created by Vincent Moscaritolo on 9/10/21.
+//
+
 #include "I2C.hpp"
-#include <stdexcept>
-#include <string.h>
 #include <errno.h>
+#include <sys/ioctl.h>                                                  // Serial Port IO Controls
+#include <fcntl.h>
+#include <termios.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include "ErrorMgr.hpp"
 
-I2C::I2C() : _fd(-1), _devAddr(0), _isSetup(false) {
+
+// I2C definitions
+
+#define I2C_SLAVE	0x0703
+#define I2C_SMBUS	0x0720	/* SMBus-level access */
+
+#define I2C_SMBUS_READ	1
+#define I2C_SMBUS_WRITE	0
+
+// SMBus transaction types
+
+#define I2C_SMBUS_QUICK		    0
+#define I2C_SMBUS_BYTE		    1
+#define I2C_SMBUS_BYTE_DATA	    2
+#define I2C_SMBUS_WORD_DATA	    3
+#define I2C_SMBUS_PROC_CALL	    4
+#define I2C_SMBUS_BLOCK_DATA	    5
+#define I2C_SMBUS_I2C_BLOCK_BROKEN  6
+#define I2C_SMBUS_BLOCK_PROC_CALL   7		/* SMBus 2.0 */
+#define I2C_SMBUS_I2C_BLOCK_DATA    8
+
+// SMBus messages
+
+#define I2C_SMBUS_BLOCK_MAX	32	/* As specified in SMBus standard */
+#define I2C_SMBUS_I2C_BLOCK_MAX	32	/* Not specified but we use same structure */
+
+// Structures used in the ioctl() calls
+
+union i2c_smbus_data
+{
+  uint8_t  byte ;
+  uint16_t word ;
+  uint8_t  block [I2C_SMBUS_BLOCK_MAX + 2] ;	// block [0] is used for length + one more for PEC
+} ;
+
+struct i2c_smbus_ioctl_data
+{
+  char read_write ;
+  uint8_t command ;
+  int size ;
+  union i2c_smbus_data *data ;
+} ;
+
+static inline int i2c_smbus_access (int fd, char rw, uint8_t command, int size, union i2c_smbus_data *data)
+{
+  struct i2c_smbus_ioctl_data args ;
+
+  args.read_write = rw ;
+  args.command    = command ;
+  args.size       = size ;
+  args.data       = data ;
+  return ::ioctl (fd, I2C_SMBUS, &args) ;
 }
 
-I2C::~I2C() {
-    stop();
+#ifndef I2C_BUS_DEV_FILE_PATH
+#define I2C_BUS_DEV_FILE_PATH "/dev/i2c-1"
+#endif /* I2C_SLAVE */
+
+ 
+I2C::I2C(){
+	_isSetup = false;
+	_fd = -1;
+	_devAddr = 00;
 }
 
-bool I2C::begin(uint8_t devAddr) {
-    int error;
-    return begin(devAddr, error);
+
+I2C::~I2C(){
+	stop();
+	
+}
+ 
+bool I2C::begin(uint8_t	devAddr){
+	int error = 0;
+
+	return begin(devAddr, error);
 }
 
-bool I2C::begin(uint8_t devAddr, int& error) {
-    return begin(devAddr, "/dev/i2c-1", error);  // Default I2C bus on Raspberry Pi
+
+bool I2C::begin(uint8_t	devAddr,   int &error){
+	static const char *ic2_device = "/dev/i2c-1";
+ 	return begin(devAddr, ic2_device, error);
+ }
+
+
+
+bool  I2C::begin(uint8_t	devAddr,  const char* path, int &error){
+	
+	  _isSetup = false;
+	  int fd ;
+
+	  if((fd = open( path, O_RDWR)) <0) {
+	
+		  ELOG_ERROR(ErrorMgr::FAC_I2C, 0, errno, "OPEN %s", path);
+
+		  error = errno;
+		  return false;
+	  }
+	  
+	  if (::ioctl(fd, I2C_SLAVE, devAddr) < 0) {
+		  
+		  ELOG_ERROR(ErrorMgr::FAC_I2C, devAddr, errno, "I2C_SLAVE");
+		  error = errno;
+		  return false;
+	  }
+
+	  _fd = fd;
+	  _isSetup = true;
+	  _devAddr = devAddr;
+	  
+	  return _isSetup;
+
 }
 
-bool I2C::begin(uint8_t devAddr, const char* path, int& error) {
-    _devAddr = devAddr;
-    
-    // Open the I2C bus
-    _fd = open(path, O_RDWR);
-    if (_fd < 0) {
-        error = errno;
-        return false;
-    }
 
-    // Set the I2C slave address
-    if (ioctl(_fd, I2C_SLAVE, _devAddr) < 0) {
-        error = errno;
-        close(_fd);
-        _fd = -1;
-        return false;
-    }
 
-    _isSetup = true;
-    return true;
+void I2C::stop(){
+	
+	if(_isSetup){
+		close(_fd);
+		_devAddr = 00;
+	}
+	
+	_isSetup = false;
 }
 
-void I2C::stop() {
-    if (_fd >= 0) {
-        close(_fd);
-        _fd = -1;
-    }
-    _isSetup = false;
+bool I2C::isAvailable(){
+
+	return _isSetup;
 }
 
-bool I2C::isAvailable() {
-    return _isSetup && (_fd >= 0);
+bool I2C::writeByte( uint8_t b1){
+
+	if(!_isSetup) return false;
+
+	if (i2c_smbus_access(_fd,I2C_SMBUS_WRITE,b1,
+									I2C_SMBUS_BYTE, NULL) < 0){
+
+			ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_WRITE BYTE () ");
+		return false;
+	}
+	
+	return   true;
 }
 
-bool I2C::writeByte(uint8_t byte) {
-    if (!_isSetup) return false;
 
-    return write(_fd, &byte, 1) == 1;
+bool I2C::writeByte(uint8_t regAddr, uint8_t b1){
+	
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data = {.byte = b1};
+  
+	if(i2c_smbus_access (_fd, I2C_SMBUS_WRITE, regAddr, I2C_SMBUS_BYTE_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_WRITE BYTE (%02x) ", regAddr);
+		return false;
+	}
+	
+	return   true;
 }
 
-bool I2C::writeByte(uint8_t regAddr, uint8_t byte) {
-    if (!_isSetup) return false;
 
-    uint8_t buffer[2] = { regAddr, byte };
-    return write(_fd, buffer, 2) == 2;
+bool I2C::writeWord(uint8_t regAddr, uint16_t word, bool swap ){
+
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data;
+	
+	if(swap){
+		data.word =((word << 8) & 0xff00) | ((word >> 8) & 0x00ff);
+	}
+	else {
+		data.word = word;
+	}
+
+	if(i2c_smbus_access (_fd, I2C_SMBUS_WRITE, regAddr, I2C_SMBUS_WORD_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_WRITE WORD (%02x) ", regAddr);
+ 	
+		return false;
+	}
+	
+	return   true;
 }
 
-bool I2C::writeWord(uint8_t regAddr, uint16_t word, bool swap) {
-    if (!_isSetup) return false;
+bool I2C::readByte(uint8_t& byte){
+	
+	if(!_isSetup) return false;
 
-    uint8_t buffer[3];
-    buffer[0] = regAddr;
-    if (swap) {
-        buffer[1] = word >> 8;
-        buffer[2] = word & 0xFF;
-    }
-    else {
-        buffer[1] = word & 0xFF;
-        buffer[2] = word >> 8;
-    }
+	union i2c_smbus_data data;
+	
+	if(i2c_smbus_access (_fd, I2C_SMBUS_READ, 0, I2C_SMBUS_BYTE, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_WRITE BYTE () ");
+ 
+		return false;
+	}
 
-    return write(_fd, buffer, 3) == 3;
+	byte = data.byte & 0xFF;
+	return true;
 }
 
-bool I2C::readByte(uint8_t& byte) {
-    if (!_isSetup) return false;
 
-    return read(_fd, &byte, 1) == 1;
+
+
+bool I2C::readByte(uint8_t regAddr,  uint8_t& byte){
+	
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data;
+	
+	if(i2c_smbus_access (_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_BYTE_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_READ BYTE (%02x, %02x) ",_devAddr, regAddr);
+ 
+		return false;
+	}
+
+	byte = data.byte & 0xFF;
+	return true;
 }
 
-bool I2C::readByte(uint8_t regAddr, uint8_t& byte) {
-    if (!_isSetup) return false;
 
-    if (write(_fd, &regAddr, 1) != 1) return false;
-    return read(_fd, &byte, 1) == 1;
+bool I2C::readByte(uint8_t regAddr,  unsigned char * byte) {
+	
+	uint8_t b;
+	
+	bool success =  readByte(regAddr, b);
+	if(success) *byte = b;
+	return success;
+ }
+
+
+
+bool I2C::readWord(uint8_t regAddr,  int16_t& word, bool swap){
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data;
+	
+	if(i2c_smbus_access (_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_WORD_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_READ WORD (%02x, %02x) ", _devAddr, regAddr);
+
+		return false;
+	}
+
+	if(swap){
+		word = ((data.block[0]) << 8) | (data.block[1] );
+	}
+	else {
+		word = data.word;
+	}
+	return true;
+
 }
 
-bool I2C::readWord(uint8_t regAddr, uint16_t& word, bool swap) {
-    if (!_isSetup) return false;
+bool I2C::readWord(uint8_t regAddr,  uint16_t& word, bool swap){
 
-    if (write(_fd, &regAddr, 1) != 1) return false;
+	if(!_isSetup) return false;
 
-    uint8_t buffer[2];
-    if (read(_fd, buffer, 2) != 2) return false;
+	union i2c_smbus_data data;
+	
+	if(i2c_smbus_access (_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_WORD_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_READ WORD (%02x) ", regAddr);
 
-    if (swap)
-        word = (buffer[0] << 8) | buffer[1];
-    else
-        word = (buffer[1] << 8) | buffer[0];
+		return false;
+	}
 
-    return true;
+	if(swap){
+		word = ((data.block[0]) << 8) | (data.block[1] );
+	}
+	else {
+		word = data.word;
+	}
+	return true;
+}
+ 
+/*
+ 
+ i2cdetect -F 1
+ Functionalities implemented by /dev/i2c-1:
+ I2C                              yes
+ SMBus Quick Command              yes
+ SMBus Send Byte                  yes
+ SMBus Receive Byte               yes
+ SMBus Write Byte                 yes
+ SMBus Read Byte                  yes
+ SMBus Write Word                 yes
+ SMBus Read Word                  yes
+ SMBus Process Call               yes
+ SMBus Block Write                yes
+ SMBus Block Read                 no		<<<----
+ SMBus Block Process Call         no
+ SMBus PEC                        yes
+ I2C Block Write                  yes
+ I2C Block Read                   yes
+
+ */
+
+bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t & block ){
+
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data;
+
+	memset(data.block, 0, sizeof(data.block));
+#if 0
+	data.block[0] = size + 1;
+
+	if(i2c_smbus_access (_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_READ BLOCK (%02x) ", regAddr);
+
+		return false;
+	}
+	memcpy(block, data.block, sizeof(block));
+	return true;
+
+#else
+	
+	bool status = false;
+	
+	if(size > sizeof(block))
+		return false;
+	
+	status = readByte(regAddr, data.block[0]);
+	if(status) {
+		for(int i = 1; i < size; i++){
+			status &= readByte( data.block[i]);
+			if(!status) break;
+		}
+	}
+	
+	 
+	if(status)
+		memcpy(block, data.block, sizeof(block));
+
+	return status;
+	
+#endif
+	
 }
 
-bool I2C::readWord(uint8_t regAddr, int16_t& word, bool swap) {
-    uint16_t uword;
-    bool success = readWord(regAddr, uword, swap);
-    if (success)
-        word = static_cast<int16_t>(uword);
-    return success;
+// stupid c++ alternative version
+bool I2C::readBlock(uint8_t regAddr, uint8_t size, unsigned char * block ){
+	if(!_isSetup) return false;
+
+	bool status = false;
+
+	memset(block, 0, sizeof(size));
+ 
+	status = readByte(regAddr, block[0]);
+	if(status) {
+		for(int i = 1; i < size; i++){
+			status &= readByte( block[i]);
+			if(!status) break;
+		}
+	}
+	return status;
 }
 
-bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t& block) {
-    if (!_isSetup || size > 32) return false;
 
-    if (write(_fd, &regAddr, 1) != 1) return false;
-    return read(_fd, block, size) == size;
+
+
+bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t  block ){
+
+	if(!_isSetup) return false;
+
+	union i2c_smbus_data data;
+
+	memset(data.block, 0, sizeof(data.block));
+	
+	if (size > 32)
+		size = 32;
+	
+	for (int i = 1; i <= size; i++)
+		 data.block[i] = block[i-1];
+	data.block[0] = size;
+
+	if(i2c_smbus_access (_fd, I2C_SMBUS_WRITE, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0){
+		
+		ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno,  "I2C_SMBUS_WRITE BLOCK (%02x) ", regAddr);
+
+		return false;
+	}
+ 
+	return true;
 }
 
-bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t block) {
-    if (!_isSetup || size > 32) return false;
 
-    uint8_t buffer[33];
-    buffer[0] = regAddr;
-    memcpy(buffer + 1, block, size);
-
-    return write(_fd, buffer, size + 1) == size + 1;
-}
-
-bool I2C::readByte(uint8_t regAddr, unsigned char* byte) {
-    return readByte(regAddr, reinterpret_cast<uint8_t&>(*byte));
-}
-
-bool I2C::readBlock(uint8_t regAddr, uint8_t size, unsigned char* block) {
-    return readBlock(regAddr, size, reinterpret_cast<i2c_block_t&>(*block));
-}
+ 
