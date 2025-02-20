@@ -4437,7 +4437,7 @@ bool DisplayMgr::processSelectorKnobActionForGPSWaypoint( knob_action_t action){
 		wasHandled = true;
 		
 		if(savedCB) {
-			savedCB(wasHandled, uuid, action);
+			savedCB(false, uuid, action);
 		}
 	}
 	
@@ -5163,21 +5163,22 @@ typedef struct {
 } filter_table_t;
 
 static const filter_table_t filter_table[] = {
-	{'core', 'asal'}, // daap.songalbum
-	{'core', 'asar'},	// daap.songartist
-	{'core', 'minm'}, // dmap.itemname
-	{'core', 'caps'}, // play status  ( 01/ 02 )
+	{.type = 'core', .code = 'asal'}, // daap.songalbum
+	{.type = 'core', .code = 'asar'}, // daap.songartist
+	{.type = 'core', .code = 'minm'}, // dmap.itemname
+	{.type = 'core', .code = 'caps'}, // play status  ( 01/ 02 )
 	
-	{'ssnc', 'mden'}, //  Metadata stream processing end
-	{'ssnc', 'mdst'}, //  Metadata stream processing start
+	{.type = 'ssnc', .code = 'mden'}, // Metadata stream processing end
+	{.type = 'ssnc', .code = 'mdst'}, // Metadata stream processing start
 	
-	{'ssnc', 'aend'},	// airplay session end
-	{'ssnc', 'abeg'},	// airplay session begin
+	{.type = 'ssnc', .code = 'aend'}, // airplay session end
+	{.type = 'ssnc', .code = 'abeg'}, // airplay session begin
 	
-	{'ssnc', 'pbeg'},	// play stream begin.
-	{'ssnc', 'pend'}, // play stream end.
+	{.type = 'ssnc', .code = 'pbeg'}, // play stream begin.
+	{.type = 'ssnc', .code = 'pend'}, // play stream end.
 	
 };
+
 static bool sInFilterTable(uint32_t type, uint32_t code){
 	
 	for( int i = 0; i <  sizeof(filter_table)/ sizeof(filter_table_t); i++){
@@ -5300,3 +5301,5 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	
 	printf("cleanup GPSReader\n");
 }
+```
+```cpp

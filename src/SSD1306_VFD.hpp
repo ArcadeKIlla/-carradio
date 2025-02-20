@@ -45,12 +45,6 @@ public:
         return true;
     }
 
-    bool clear() {
-        _oled.clearDisplay();
-        _oled.display();
-        return true;
-    }
-
     bool setLine(int line, const string& str) {
         // Convert VFD line position to OLED coordinates
         // Assuming 8 pixel high characters and 2 lines
@@ -90,7 +84,9 @@ public:
     }
 
     bool clearScreen() override {
-        return clear(); // Reuse existing clear() implementation
+        _oled.clearDisplay();
+        _oled.display();
+        return true;
     }
 
     bool setCursor(uint8_t x, uint8_t y) override {
@@ -189,11 +185,11 @@ public:
         uint8_t y_start = static_cast<uint8_t>(offset * height());
         uint8_t actual_height = static_cast<uint8_t>(bar_height * height());
 
-        // Draw outline (not filled)
-        _oled.drawRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, false, SSD1306_WHITE);
+        // Draw outline
+        _oled.drawRoundRect(x_start, 0, SCROLL_BAR_WIDTH, DISPLAY_HEIGHT, 1, SSD1306_WHITE);
 
         // Draw filled portion
-        _oled.drawRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, false, SSD1306_WHITE);
+        _oled.fillRect(x_start, y_start, SCROLL_BAR_WIDTH, actual_height, SSD1306_WHITE);
         _oled.display();
     }
 
