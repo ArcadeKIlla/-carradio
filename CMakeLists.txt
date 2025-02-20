@@ -24,10 +24,15 @@ pkg_check_modules(RTLSDR REQUIRED librtlsdr)
 
 # Find additional required packages
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(MINMEA REQUIRED libminmea)
 pkg_check_modules(SQLITE3 REQUIRED sqlite3)
 
+# Add minmea source files
+set(MINMEA_SOURCES
+    lib/minmea/minmea.c
+)
+
 set(SOURCES
+    ${MINMEA_SOURCES}
     src/main.cpp
     src/DisplayMgr.cpp
     src/I2C.cpp
@@ -77,7 +82,7 @@ target_include_directories(carradio
     ${PIGPIO_INCLUDE_DIRS}
     ${ALSA_INCLUDE_DIRS}
     ${RTLSDR_INCLUDE_DIRS}
-    ${MINMEA_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/lib/minmea  # For minmea headers
     ${SQLITE3_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/lib/dsp  # For DSP filter headers
 )
@@ -95,7 +100,7 @@ target_link_libraries(carradio
     ${ALSA_LIBRARIES}
     ${RTLSDR_LIBRARIES}
     i2c
-    ${MINMEA_LIBRARIES}
     ${SQLITE3_LIBRARIES}
     dsp  # For DSP filters
+    m  # Math library for DSP
 )
