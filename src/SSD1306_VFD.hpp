@@ -22,8 +22,7 @@ public:
     }
 
     bool begin(const char* path, speed_t speed) override {
-        // I2C setup is handled in SSD1306::begin()
-        return _oled.begin();
+        return init();
     }
 
     bool begin(const char* path, speed_t speed, int &error) override {
@@ -34,13 +33,22 @@ public:
         return true;
     }
 
+    bool init() override {
+        if (!_oled.begin()) {
+            return false;
+        }
+        _oled.clear();
+        _oled.display();
+        return true;
+    }
+
     void stop() override {
-        _oled.clearDisplay();
+        _oled.clear();
         _oled.display();
     }
 
     bool reset() override {
-        _oled.clearDisplay();
+        _oled.clear();
         _oled.display();
         return true;
     }
@@ -115,6 +123,8 @@ public:
 
     bool setFont(font_t font) override {
         _currentFont = font;
+        _oled.clear();
+        _oled.display();
         switch(font) {
             case FONT_MINI:
                 _oled.setTextSize(1); // 6x8 pixels per character
@@ -230,7 +240,7 @@ public:
 
 private:
     static const uint8_t SCROLL_BAR_WIDTH = 4;
-    SSD1306& _oled;
+    SSD1306 _oled;
     font_t _currentFont;
 
     // Helper methods for font dimensions
