@@ -3,7 +3,8 @@
 #include <string>
 #include <vector>
 #include <functional>
-#include "DuppaKnob.hpp"
+#include <memory>
+#include "RotaryEncoder.hpp"
 #include "SSD1306_LCD.hpp"
 #include "RadioMgr.hpp"
 #include "RGB.hpp"
@@ -75,8 +76,8 @@ public:
         KNOB_LEFT,
     } knob_id_t;
 
-    DuppaKnob* rightKnob() { return &_rightKnob; };
-    DuppaKnob* leftKnob() { return &_leftKnob; };
+    RotaryEncoder* rightKnob() { return _rightKnob.get(); };
+    RotaryEncoder* leftKnob() { return _leftKnob.get(); };
 
     // display related
     bool setBrightness(double level);   // 0.0 -  1.0
@@ -101,9 +102,9 @@ public:
     void showDevStatus();
 
 private:
-    SSD1306_LCD _display;
-    DuppaKnob _rightKnob;
-    DuppaKnob _leftKnob;
+    std::unique_ptr<SSD1306_LCD> _display;
+    std::unique_ptr<RotaryEncoder> _rightKnob;
+    std::unique_ptr<RotaryEncoder> _leftKnob;
     mode_state_t _mode;
     bool _shouldAutoPlay;
 
