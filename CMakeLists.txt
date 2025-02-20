@@ -17,6 +17,7 @@ if(NOT PIGPIO_FOUND)
 endif()
 
 set(SOURCES
+    src/main.cpp
     src/DisplayMgr.cpp
     src/I2C.cpp
     src/RotaryEncoder.cpp
@@ -31,6 +32,17 @@ set(SOURCES
     src/DuppaLEDRing.cpp
     src/ErrorMgr.cpp
     src/FrameDB.cpp
+    src/AudioOutput.cpp
+    src/AudioLineInput.cpp
+    src/AirplayInput.cpp
+    src/W1Mgr.cpp
+    src/ArgononeFan.cpp
+    src/CPUInfo.cpp
+    src/PiCarDB.cpp
+    src/DTCManager.cpp
+    src/TimeStamp.cpp
+    src/RtlSdr.cpp
+    src/dbuf.cpp
 )
 
 add_executable(carradio ${SOURCES})
@@ -46,8 +58,14 @@ target_include_directories(carradio
     ${PIGPIO_INCLUDE_DIRS}
 )
 
+find_library(GPIOD_LIBRARY gpiod)
+if(NOT GPIOD_LIBRARY)
+    message(FATAL_ERROR "gpiod library not found")
+endif()
+
 target_link_libraries(carradio
     PRIVATE
     ${PIGPIO_LIBRARIES}
+    ${GPIOD_LIBRARY}
     i2c
 )
