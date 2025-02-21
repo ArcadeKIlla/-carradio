@@ -216,8 +216,7 @@ bool PiCarMgr::begin(){
 		printf("Display started\n");
 		// Test display
 		_display.reset();  // This will clear the screen
-		_display.printPacket("CarRadio");  // Use printPacket instead of direct write
-		_display.printPacket("\nInitializing...");  // Use newline instead of setCursor
+		_display.showMessage("CarRadio\nInitializing...", 2);  // Show for 2 seconds
 		sleep(2);
 	} else {
 		printf("Failed to start Display\n");
