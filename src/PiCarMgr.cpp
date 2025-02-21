@@ -143,45 +143,45 @@ PiCarMgr * PiCarMgr::shared() {
 
 
 PiCarMgr::PiCarMgr():
-	_isSetup(false),
-	_isRunning(true),
-	_display(DisplayMgr::OLED_DISPLAY),
-	_audio(),
-	_radio(),
-	_db(),
-	_isRunning = true,
-	_lastMenuMode = MENU_UNKNOWN,
-	_lastRadioMode = RadioMgr::MODE_UNKNOWN,
-	_lastFreqForMode.clear(),
-	_tuner_mode = TUNE_ALL,
-	_dimLevel =  1.0, // full
-	_isDayTime = true,
-	_autoDimmerMode = false,
-	_autoShutdownMode = false,
-	_shutdownDelay = UINT16_MAX,
-	_long_press_ms = 750,
-	_clocksync_gps = false,
-	_clocksync_gps_secs = 0,
-	_shouldSendRadioCAN = true,
-	_serial_number = 0,
-	_part_number = 0,
-	_stations.clear(),
-	_preset_stations.clear(),
-	_scanner_freqs.clear(),
-	_w1Map.clear(),
-	_waypoints.clear(),
-	_lastActivityTime = {0,0},
-	_startTime = {0,0},
-	_gpio_chip = NULL,
-	_gpio_relay1 = NULL,
-#if USE_GPIO_INTERRUPT
-	_gpio_line_int = NULL,
-#endif
-	_piCarLoopTID = 0,
-	_canPeriodRadio293TaskID = 0,
-	_canPeriodRadioTaskID = 0,
-	_canPeriodAudioTaskID = 0
+    _isSetup(false),
+    _display(DisplayMgr::OLED_DISPLAY),
+    _audio(),
+    _radio(),
+    _db()
 {
+	_isRunning = true;
+	_lastMenuMode = MENU_UNKNOWN;
+	_lastRadioMode = RadioMgr::MODE_UNKNOWN;
+	_lastFreqForMode.clear();
+	_tuner_mode = TUNE_ALL;
+	_dimLevel =  1.0; // full
+	_isDayTime = true;
+	_autoDimmerMode = false;
+	_autoShutdownMode = false;
+	_shutdownDelay = UINT16_MAX;
+	_long_press_ms = 750;
+	_clocksync_gps = false;
+	_clocksync_gps_secs = 0;
+	_shouldSendRadioCAN = true;
+	_serial_number = 0;
+	_part_number = 0;
+	_stations.clear();
+	_preset_stations.clear();
+	_scanner_freqs.clear();
+	_w1Map.clear();
+	_waypoints.clear();
+	_lastActivityTime = {0,0};
+	_startTime = {0,0};
+	_gpio_chip = NULL;
+	_gpio_relay1 = NULL;
+#if USE_GPIO_INTERRUPT
+	_gpio_line_int = NULL;
+#endif
+	_piCarLoopTID = 0;
+	_canPeriodRadio293TaskID = 0;
+	_canPeriodRadioTaskID = 0;
+	_canPeriodAudioTaskID = 0
+
 	_main_menu_map = {
 		{MENU_SELECT_AUDIO_SOURCE, "Source"},
 		{MENU_AUDIO, "Audio"},
