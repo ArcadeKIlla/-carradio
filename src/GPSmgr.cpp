@@ -347,6 +347,53 @@ string GPSmgr::latlonString(GPSLocation_t loc) {
     return string(str);
 }
 
+// MARK: -  NMEA decode
+
+void GPSmgr::processNMEA(u_int8_t *buffer, size_t length) {
+    // Convert buffer to null-terminated string
+    char* sentence = new char[length + 1];
+    memcpy(sentence, buffer, length);
+    sentence[length] = '\0';
+
+    minmea_sentence_id id = minmea_sentence_id(sentence);
+
+    switch (id) {
+        case MINMEA_SENTENCE_RMC: {
+            struct minmea_sentence_rmc frame;
+            if (minmea_parse_rmc(&frame, sentence)) {
+                if (frame.valid) {
+                    _lastLocation.latitude = minmea_tocoord(&frame.latitude);
+                    _lastLocation.longitude = minmea_tocoord(&frame.longitude);
+                    _lastVelocity.speed = frame.speed.value;
+                    _lastVelocity.course = frame.course.value;
+                    
+                    // Update GPS time
+                    _lastGPSTime.year = frame.date.year + 2000;  // Convert 2-digit year to 4-digit
+                    _lastGPSTime.month = frame.date.month;
+                    _lastGPSTime.day = frame.date.day;
+                    _lastGPSTime.hour = frame.time.hours;
+                    _lastGPSTime.minute = frame.time.minutes;
+                    _lastGPSTime.second = frame.time.seconds;
+                    _lastGPSTime.valid = true;
+                }
+            }
+            break;
+        }
+        case MINMEA_SENTENCE_GGA: {
+            struct minmea_sentence_gga frame;
+            if (minmea_parse_gga(&frame, sentence)) {
+                _lastLocation.altitude = minmea_tofloat(&frame.altitude);
+                _lastLocation.valid = true;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    delete[] sentence;
+}
+
 // MARK: -  UBX decode
  
 #define DEBUG_UBX 0
