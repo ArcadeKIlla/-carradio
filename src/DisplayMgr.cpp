@@ -3016,15 +3016,14 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 			firstLine = max(firstLine - 1,  0);
 		}
 		
-		constexpr int top = 16+5 + 4;
-		_vfd->printRows(top, 9 , rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
+		_vfd->printRows(20, 9 , rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
 		
 		if(rows.size() > displayedLines){
 			
 			float bar_height =  (float)(displayedLines +1)/ (float)rows.size() ;
 			float offset =  (float)_lineOffset / ((float)rows.size() -1) ;
 			
-		_vfd->drawScrollBar(top - 9, bar_height ,offset);
+		_vfd->drawScrollBar(11, bar_height ,offset);
 		}
 	}
 }
@@ -3196,7 +3195,7 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 				VFD::VFD_CLEAR_AREA,
 				// static_cast<uint8_t>(itemX+1),  static_cast<uint8_t> (topbox+1),
 				static_cast<uint8_t>(start),  static_cast<uint8_t> (topbox+1),
-				static_cast<uint8_t> (rightbox-1),static_cast<uint8_t> (bottombox-1)};
+				static_cast<uint8_t>(rightbox-1),static_cast<uint8_t>(bottombox-1)};
 			
 			_vfd->writePacket(buff2, sizeof(buff2), 1000);
 		}
@@ -4284,11 +4283,9 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	
 	PiCarMgr*		mgr 	= PiCarMgr::shared();
 	GPSmgr*			gps 	= mgr->gps();
+	
 	constexpr int displayedLines = 5;
-	//
-	//	uint8_t width = _vfd->width();
-	//	uint8_t height = _vfd->height();
-	//
+	
 	static int lastOffset = 0;
 	static int firstLine = 0;
 	
@@ -4366,6 +4363,7 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 			if(i < wps.size()) {
 				auto wp = wps[i];
 				string name = wp.name;
+				
 				auto nameLen = name.size();
 			
 				if(nameLen> 16)
@@ -4384,7 +4382,7 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	 			}
  			}
 			else {
-				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") + " EXIT" ;
+				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") + " EXIT   " ;
 			}
 	 
 			row = {line,distance};
@@ -4485,7 +4483,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 		
 		_vfd->setFont(VFD::FONT_MINI);
 		_vfd->setCursor(2,topRow);
-		_vfd->printPacket("DISTANCE");
+		_vfd->printPacket("LAT/LONG");
 		
 		_vfd->setCursor(midX +20, topRow);
 		_vfd->printPacket("BEARING");
@@ -5395,6 +5393,7 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 	
 	drawTimeBox();
 }
+
 
 void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 	
