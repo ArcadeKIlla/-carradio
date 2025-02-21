@@ -2381,72 +2381,53 @@ void PiCarMgr::displayWaypoint(string uuid){
 	});
 }
 
-void PiCarMgr::displayAudioMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-	
-	vector<string> menu_items = {};
-	
-	char buffer[64] = {0};
-	
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","Radio CAN",  _shouldSendRadioCAN?"YES":"NO");
-	menu_items.push_back(string(buffer));
+void PiCarMgr::displayRadioMenu() {
+    if(!_radio.isOn()) return;
+    
+    RadioMgr::radio_mode_t mode;
+    uint32_t freq;
+    _radio.queueGetFrequencyandMode(mode, freq);
+    
+    vector<string> items = {"Tune", "Presets", "Scanner"};
+    _display.showMenuScreen(items, 0, "Radio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
+            switch(selectedIndex) {
+                case 0: // Tune
+                    _radio.setFrequencyandMode(mode, freq);
+                    break;
+                    
+                case 1: // Presets
+                    displayScannerChannels({mode, freq});
+                    break;
+                    
+                case 2: // Scanner
+                    _radio.scanChannels(_scanner_freqs);
+                    break;
+            }
+        }
+    });
+}
 
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","Auto Dimmer",  _autoDimmerMode?"YES":"NO");
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","ClockSync GPS",  _clocksync_gps?"YES":"NO");
-	menu_items.push_back(string(buffer));
- 
-	menu_items.push_back("Exit ");
-	
-	static uint last_selected_item = 0;
-	
-	_display.showMenuScreen(menu_items,
-									last_selected_item,
-									"Debug Values",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-			
-			last_selected_item = newSelectedItem;
-			
-			bool didChangeStuff = true;
-			
-			switch (newSelectedItem) {
-					
-				case 0:
-					_shouldSendRadioCAN = !_shouldSendRadioCAN;
-						break;
-
-				case 1:
-					_autoDimmerMode = !_autoDimmerMode;
-	 				break;
-
-				case 2:
-					_clocksync_gps = !_clocksync_gps;
-					if(_clocksync_gps && _clocksync_gps_secs == 0) _clocksync_gps_secs = 5;
-					break;
-	 
-				default:
-					didChangeStuff = false;
-					// fall back to main menu
- 					break;
-			}
-			if(didChangeStuff){
-				saveRadioSettings();
-				displayDebugMenu();
- 			}
-			else {
-				displayMenu();
-				
-			}
-		}
-	});
-	
+void PiCarMgr::displayDebugMenu() {
+    vector<string> items = {"System Info", "Radio Debug", "Display Test"};
+    
+    _display.showMessage("Debug Menu", [=](bool didSucceed, size_t selectedIndex) {
+        if(didSucceed) {
+            switch(selectedIndex) {
+                case 0: // System Info
+                    setDisplayMode(MENU_DEBUG);
+                    break;
+                    
+                case 1: // Radio Debug
+                    // Add radio debug functionality
+                    break;
+                    
+                case 2: // Display Test
+                    _display.showMessage("Display Test");
+                    break;
+            }
+        }
+    });
 }
 
 vector<string> PiCarMgr::settingsMenuItems(){
@@ -3086,43 +3067,4 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
  
 	return success;
 
-}
-
-void PiCarMgr::displayRadioMenu() {
-    if(!_radio.isOn()) return;
-    
-    RadioMgr::radio_mode_t mode;
-    uint32_t freq;
-    _radio.queueGetFrequencyandMode(mode, freq);
-    
-    _display.showRadioMenu(mode, freq, [=](bool didSucceed,
-                                          RadioMgr::radio_mode_t selectedMode,
-                                          uint32_t selectedFreq,
-                                          DisplayMgr::knob_action_t action) {
-        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-            _radio.tuneToFrequency(selectedMode, selectedFreq);
-        }
-    });
-}
-
-void PiCarMgr::displayDebugMenu() {
-    vector<string> items = {"System Info", "Radio Debug", "Display Test"};
-    
-    _display.showMenu("Debug Menu", items, [=](bool didSucceed, size_t selectedIndex) {
-        if(didSucceed) {
-            switch(selectedIndex) {
-                case 0: // System Info
-                    setDisplayMode(MENU_MODE_INFO);
-                    break;
-                    
-                case 1: // Radio Debug
-                    // Add radio debug functionality
-                    break;
-                    
-                case 2: // Display Test
-                    _display.runDisplayTest();
-                    break;
-            }
-        }
-    });
 }

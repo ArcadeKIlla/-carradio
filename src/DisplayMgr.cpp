@@ -5294,8 +5294,8 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 }
 
 bool DisplayMgr::reset() {
-    if(_display) {
-        return _display->reset();
+    if(_vfd) {
+        return _vfd->reset();
     }
     return false;
 }
