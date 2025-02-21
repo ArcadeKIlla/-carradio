@@ -154,7 +154,7 @@ PiCarMgr::PiCarMgr():
 	_lastRadioMode = RadioMgr::MODE_UNKNOWN;
 	_lastFreqForMode.clear();
 	_tuner_mode = TUNE_ALL;
-	_dimLevel =  1.0; // full
+	_dimLevel = 1.0; // full
 	_isDayTime = true;
 	_autoDimmerMode = false;
 	_autoShutdownMode = false;
@@ -163,8 +163,8 @@ PiCarMgr::PiCarMgr():
 	_clocksync_gps = false;
 	_clocksync_gps_secs = 0;
 	_shouldSendRadioCAN = true;
-	_serial_number = 0;
-	_part_number = 0;
+	_serial_number = "0";
+	_part_number = "0";
 	_stations.clear();
 	_preset_stations.clear();
 	_scanner_freqs.clear();
@@ -186,7 +186,7 @@ PiCarMgr::PiCarMgr():
 		{MENU_SELECT_AUDIO_SOURCE, "Source"},
 		{MENU_AUDIO, "Audio"},
 		{MENU_SETTINGS, "Settings"},
-		{MENU_SCANNER_CHANNELS, "Scanner"},
+		{MENU_RADIO, "Scanner"},
 		{MENU_GPS, "GPS"},
 		{MENU_DEBUG, "Debug"},
 		{MENU_TIME, "Time"},
