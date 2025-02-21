@@ -2411,8 +2411,8 @@ void PiCarMgr::displayRadioMenu() {
 void PiCarMgr::displayDebugMenu() {
     vector<string> items = {"System Info", "Radio Debug", "Display Test"};
     
-    _display.showMessage("Debug Menu", [=](bool didSucceed, size_t selectedIndex) {
-        if(didSucceed) {
+    _display.showMenuScreen(items, 0, "Debug Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
             switch(selectedIndex) {
                 case 0: // System Info
                     setDisplayMode(MENU_DEBUG);
