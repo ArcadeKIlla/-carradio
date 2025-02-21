@@ -5292,8 +5292,6 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	printf("cleanup GPSReader\n");
 }
 
-```
-```cpp
 void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 	
 	PiCarMgr*		mgr 	= PiCarMgr::shared();
