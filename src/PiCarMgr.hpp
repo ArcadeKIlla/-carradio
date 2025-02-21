@@ -60,6 +60,7 @@
 #include "CompassSensor.hpp"
 #endif
 #include "json.hpp"
+#include "SSD1306_VFD.hpp"
 
 using namespace std;
  
@@ -337,5 +338,6 @@ private:
 	struct gpiod_line*  		_gpio_line_int = NULL;
 	struct gpiod_line*		_gpio_relay1;
 #endif
-};
 
+	SSD1306_VFD          _oled;  // OLED display
+};
