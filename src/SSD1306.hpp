@@ -30,7 +30,7 @@ public:
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bool white);
 
 private:
-    void sendCommand(uint8_t command);
+    bool sendCommand(uint8_t command);
     void sendData(uint8_t data);
     void sendData(const std::vector<uint8_t>& buffer);
     

@@ -39,35 +39,76 @@ SSD1306::~SSD1306() {
 }
 
 bool SSD1306::begin() {
-    if (!_i2c.begin(_i2cAddress))
+    if (!_i2c.begin(_i2cAddress)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 I2C begin failed");
         return false;
+    }
 
-    // Init sequence
-    sendCommand(SSD1306_DISPLAYOFF);
-    sendCommand(SSD1306_SETDISPLAYCLOCKDIV);
-    sendCommand(0x80);
-    sendCommand(SSD1306_SETMULTIPLEX);
-    sendCommand(DISPLAY_HEIGHT - 1);
-    sendCommand(SSD1306_SETDISPLAYOFFSET);
-    sendCommand(0x00);
-    sendCommand(SSD1306_SETSTARTLINE | 0x00);
-    sendCommand(SSD1306_CHARGEPUMP);
-    sendCommand(0x14);
-    sendCommand(SSD1306_MEMORYMODE);
-    sendCommand(0x00);
-    sendCommand(SSD1306_SEGREMAP | 0x1);
-    sendCommand(SSD1306_COMSCANDEC);
-    sendCommand(SSD1306_SETCOMPINS);
-    sendCommand(0x12);
-    sendCommand(SSD1306_SETCONTRAST);
-    sendCommand(0xCF);
-    sendCommand(SSD1306_SETPRECHARGE);
-    sendCommand(0xF1);
-    sendCommand(SSD1306_SETVCOMDETECT);
-    sendCommand(0x40);
-    sendCommand(SSD1306_DISPLAYALLON_RESUME);
-    sendCommand(SSD1306_NORMALDISPLAY);
-    sendCommand(SSD1306_DISPLAYON);
+    // Init sequence with error logging
+    if (!sendCommand(SSD1306_DISPLAYOFF)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Display Off failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETDISPLAYCLOCKDIV) || !sendCommand(0x80)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Clock Div failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETMULTIPLEX) || !sendCommand(DISPLAY_HEIGHT - 1)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Multiplex failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETDISPLAYOFFSET) || !sendCommand(0x00)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Display Offset failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETSTARTLINE | 0x00)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Start Line failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_CHARGEPUMP) || !sendCommand(0x14)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Charge Pump failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_MEMORYMODE) || !sendCommand(0x00)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Memory Mode failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SEGREMAP | 0x1)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Segment Remap failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_COMSCANDEC)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 COM Scan Dec failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETCOMPINS) || !sendCommand(0x12)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 COM Pins failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETCONTRAST) || !sendCommand(0xCF)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Contrast failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETPRECHARGE) || !sendCommand(0xF1)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Precharge failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_SETVCOMDETECT) || !sendCommand(0x40)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 VCOM Detect failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_DISPLAYALLON_RESUME)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Display All On Resume failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_NORMALDISPLAY)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Normal Display failed");
+        return false;
+    }
+    if (!sendCommand(SSD1306_DISPLAYON)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Display On failed");
+        return false;
+    }
 
     clear();
     display();
@@ -186,8 +227,12 @@ void SSD1306::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bo
     }
 }
 
-void SSD1306::sendCommand(uint8_t command) {
-    _i2c.writeByte(0x00, command);  // 0x00 for command
+bool SSD1306::sendCommand(uint8_t command) {
+    bool success = _i2c.writeByte(0x00, command);  // 0x00 for command
+    if (!success) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 command 0x%02X failed", command);
+    }
+    return success;
 }
 
 void SSD1306::sendData(uint8_t data) {
