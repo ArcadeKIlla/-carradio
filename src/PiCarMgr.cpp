@@ -180,7 +180,7 @@ PiCarMgr::PiCarMgr():
 	_piCarLoopTID = 0;
 	_canPeriodRadio293TaskID = 0;
 	_canPeriodRadioTaskID = 0;
-	_canPeriodAudioTaskID = 0
+	_canPeriodAudioTaskID = 0;
 
 	_main_menu_map = {
 		{MENU_SELECT_AUDIO_SOURCE, "Source"},
