@@ -1442,7 +1442,7 @@ bool PiCarMgr::periodicCAN_CB_Radio293(canid_t &can_id, vector<uint8_t> &bytes){
 			uint16_t  freq =  _radio.frequency() /1.0e5;
  
 			vector<uint8_t>  packet = {
-				static_cast<uint8_t> (mode),
+				static_cast<uint8_t>(mode),
 				0x01,
 				static_cast<uint8_t> (freq >> 8),
 				static_cast<uint8_t> (freq & 0xFF) ,
@@ -2940,23 +2940,23 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 void PiCarMgr::displayRadioMenu() {
     _display.clear();
     _display.setLine(0, "Radio Menu");
-    _display.write("");
+    _display.write();
 }
 
 void PiCarMgr::displayAudioMenu() {
     _display.clear();
     _display.setLine(0, "Audio Menu");
-    _display.write("");
+    _display.write();
 }
 
 void PiCarMgr::displayDebugMenu() {
     _display.clear();
     _display.setLine(0, "Debug Menu");
-    _display.write("");
+    _display.write();
 }
 
 void PiCarMgr::displaySettingsMenu() {
     _display.clear();
     _display.setLine(0, "Settings Menu");
-    _display.write("");
+    _display.write();
 }
