@@ -97,27 +97,27 @@ public:
 	}valueSchemaUnits_t;
 
 	typedef struct {
-		string_view  		title;
-		string_view  		description;
+		string             title;
+		string             description;
 		valueSchemaUnits_t  	units;
 	} valueSchema_t;
 
 
-	void addSchema(string_view key,  valueSchema_t schema, vector<uint8_t>obd_request = {});
-	valueSchema_t schemaForKey(string_view key);
+	void addSchema(string key,  valueSchema_t schema, vector<uint8_t>obd_request = {});
+	valueSchema_t schemaForKey(string key);
 	
 	bool obd_request(string key, vector <uint8_t> & request);
 	
-	void updateValue(string_view key, string value, time_t when);
-	void clearValue(string_view key);
+	void updateValue(string key, string value, time_t when);
+	void clearValue(string key);
 
 	void clearValues();
 	int valuesCount();
 
-	vector<string_view> 		allValueKeys();
-	vector<string_view>  	valuesUpdateSinceEtag(eTag_t eTag, eTag_t *newEtag);
-	vector<string_view>  	valuesOlderthan(time_t time);
-	bool 							valueWithKey(string_view key, string *value);
+	vector<string> 		allValueKeys();
+	vector<string>  	valuesUpdateSinceEtag(eTag_t eTag, eTag_t *newEtag);
+	vector<string>  	valuesOlderthan(time_t time);
+	bool 							valueWithKey(string key, string *value);
 	bool							boolForKey(string key, bool &state);
 	bool							bitsForKey(string key, bitset<8> &bits);
 
@@ -154,10 +154,7 @@ private:
 		string			value;
 		} value_t;
 
-	map<string_view, valueSchema_t>			_schema;
-	map<string_view, vector <uint8_t>>		_obd_request;
-	map<string_view, value_t> _values;
+	map<string, valueSchema_t>			_schema;
+	map<string, vector <uint8_t>>		_obd_request;
+	map<string, value_t> _values;
   };
-
-
-

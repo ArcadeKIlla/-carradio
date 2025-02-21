@@ -17,7 +17,11 @@
 // FalconView(tm) is a trademark of Georgia Tech Research Corporation.
 
 #ifndef TRANMERC_H
-  #define TRANMERC_H
+#define TRANMERC_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /***************************************************************************/
 /* RSC IDENTIFIER: TRANSVERSE MERCATOR
@@ -126,11 +130,7 @@
  */
 
 /* ensure proper linkage to c++ programs */
-  #ifdef __cplusplus
-extern "C" {
-  #endif
-
-
+  
   long Set_Transverse_Mercator_Parameters(double a,      
                                           double f,
                                           double Origin_Latitude,
@@ -220,8 +220,8 @@ extern "C" {
  */
 
 
-  #ifdef __cplusplus
+#ifdef __cplusplus
 }
-  #endif
+#endif
 
 #endif /* TRANMERC_H */
