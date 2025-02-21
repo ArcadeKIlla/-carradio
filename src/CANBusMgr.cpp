@@ -225,7 +225,7 @@ void CANBusMgr::processISOTPFrame(string ifName, can_frame_t frame, unsigned lon
 		//  flow control C  frame
 	 
 		uint8_t frame_flag 		= frame.data[0] & 0x0f;
-		uint8_t block_size 		= frame.data[1];
+		[[maybe_unused]] uint8_t block_size 		= frame.data[1];  // Will be used when implementing block transfer
 		uint8_t separation_delay = frame.data[2];
 
 		uint32_t hash = XXHash32::hash(ifName + to_hex(can_id, true));
@@ -242,8 +242,14 @@ void CANBusMgr::processISOTPFrame(string ifName, can_frame_t frame, unsigned lon
 			s.separation_delay = separation_delay;
 			clock_gettime(CLOCK_MONOTONIC, &s.lastSentTime);
 		
-			
-	#warning -- handle separation_delay
+			// Handle separation delay by scheduling next packet after delay
+			if(separation_delay > 0) {
+				struct timespec delay_time = {
+					.tv_sec = separation_delay / 1000,
+					.tv_nsec = (separation_delay % 1000) * 1000000
+				};
+				nanosleep(&delay_time, NULL);
+			}
 
 			if(frame_flag == 0) {
 				// force all output for now
@@ -273,41 +279,7 @@ void CANBusMgr::processISOTPFrame(string ifName, can_frame_t frame, unsigned lon
 
 
    //
- //#warning write code to process multi frame
- //	/*
- //	 The initial byte contains the type (type = 3) in the first four bits,
- //	 and a flag in the next four bits indicating if the transfer is allowed
- //	 (0 = Clear To Send,
- //	 1 = Wait,
- //	 2 = Overflow/abort).
- //	 The next byte is the block size, the count of frames that may be sent before waiting for the next flow control frame.
- //	 A value of zero allows the remaining frames to be sent without flow control or delay.
- //
- //	 The third byte is the Separation Time (ST), the minimum delay time between frames.
- //	 ST values up to 127 (0x7F) specify the minimum number of milliseconds to delay between frames,
- //	 while values in the range 241 (0xF1) to 249 (0xF9) specify delays increasing from 100 to 900 microseconds.
- //
- //	 Note that the Separation Time is defined as the minimum time between the end of one frame to the beginning of the next.
- //	 Robust implementations should be prepared to accept frames from a sender that misinterprets this as the
- //	 frame repetition rate i.e. from start-of-frame to start-of-frame.
- //	 Even careful implementations may fail to account for the minor effect of bit-stuffing in the physical layer.
- //
- //	The sender transmits the rest of the message using Consecutive Frames.
- //	 Each Consecutive Frame has a one byte PCI, with a four bit type (type = 2) followed by a 4-bit sequence number.
- //	 The sequence number starts at 1 and increments with each frame sent (1, 2,..., 15, 0, 1,...),
- //	 with which lost or discarded frames can be detected.
- //
- //	 Each consecutive frame starts at 0, initially for the first set of data in the first frame will be considered as 0th data.
- //	 So the first set of CF(Consecutive frames) start from "1".
- //	 There afterwards when it reaches "15", will be started from "0".
- //	 The 12 bit length field (in the FF) allows up to 4095 bytes of user data in a segmented message,
- //	 but in practice the typical application-specific limit is considerably lower because of receive buffer or hardware limitations.
- //	 */
- //
- //}
  
-
-
 bool CANBusMgr::sendISOTP(string ifName, canid_t can_id, canid_t reply_id,  vector<uint8_t> bytes,  int* error){
 	bool success = false;
 	
@@ -568,7 +540,6 @@ bool CANBusMgr::getStatus(vector<can_status_t> & statsOut){
 	return stats.size() > 0;;
 }
 
-#warning may want to toggle _isRunning = false here
 bool CANBusMgr::stop(string ifName, int &error){
 	
 	// close all?
@@ -580,6 +551,7 @@ bool CANBusMgr::stop(string ifName, int &error){
 				_interfaces[key] = -1;
 			}
 		}
+		_isRunning = false;
 		return true;
  	}
 	else for (auto& [key, fd]  : _interfaces){
@@ -589,6 +561,7 @@ bool CANBusMgr::stop(string ifName, int &error){
 				safe_fd_clr(fd, &_master_fds, &_max_fds);
 				_interfaces[ifName] = -1;
 			}
+			_isRunning = false;
 			return true;
 		}
 	}

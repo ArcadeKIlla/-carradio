@@ -484,17 +484,26 @@ static string valueForData(canid_t can_id, uint8_t mode, uint8_t pid,
 	
 	if(value.empty()){
 		switch(len){
-				case 1: value = to_string(data[0]); break;
-				case 2: value = to_string((data[0] <<8 )| data[1]); break;
-				case 3: value = to_string( (data[0] <<12)|(data[1] <<8) | data[2]); break;
-
-#warning FIX THIS  warning: converting the result of '<<' to a boolean; did you mean '(data[0] << 16) != 0'?
-			
-			case 4: value = to_string( (data[0] <<16) || (data[1] <<12)|(data[2] <<8) | data[3]); break;
-
-			default:  value =string( (char* )data, len); break;
-			}
+			case 1: 
+				value = to_string(data[0]); 
+				break;
+			case 2: 
+				value = to_string((data[0] << 8) | data[1]); 
+				break;
+			case 3: 
+				value = to_string((data[0] << 16) | (data[1] << 8) | data[2]); 
+				break;
+			case 4: 
+				value = to_string((static_cast<uint32_t>(data[0]) << 24) | 
+								(static_cast<uint32_t>(data[1]) << 16) | 
+								(static_cast<uint32_t>(data[2]) << 8) | 
+								data[3]); 
+				break;
+			default:  
+				value = string((char*)data, len); 
+				break;
 		}
+	}
 	
 	return value;;
 }
