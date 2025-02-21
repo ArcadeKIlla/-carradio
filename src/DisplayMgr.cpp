@@ -5292,3 +5292,10 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	
 	printf("cleanup MetaDataReader\n");
 }
+
+bool DisplayMgr::reset() {
+    if(_display) {
+        return _display->reset();
+    }
+    return false;
+}
