@@ -22,7 +22,7 @@ public:
     }
 
     bool begin(const char* path, speed_t speed) override {
-        return init();
+        return init(path);
     }
 
     bool begin(const char* path, speed_t speed, int &error) override {
@@ -33,8 +33,8 @@ public:
         return true;
     }
 
-    bool init() {
-        if (!_oled.begin()) {
+    bool init(const char* path = "/dev/i2c-1") {
+        if (!_oled.begin(path)) {
             return false;
         }
         _oled.clear();

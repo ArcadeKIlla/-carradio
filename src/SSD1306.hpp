@@ -13,7 +13,7 @@ public:
     SSD1306(uint8_t i2cAddress = DEFAULT_I2C_ADDRESS);
     ~SSD1306();
 
-    bool begin();
+    bool begin(const char* path = "/dev/i2c-1");
     void clear();
     void display();
     void setContrast(uint8_t contrast);

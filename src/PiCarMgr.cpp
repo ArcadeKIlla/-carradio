@@ -51,10 +51,10 @@ using namespace Utils;
 
 const char* 	PiCarMgr::PiCarMgr_Version = "1.0.1";
 
+// Update the path to use I2C
+const char* path_display  = "/dev/i2c-1";  // Standard I2C bus on Raspberry Pi
 
-const char* path_display  = "/dev/ttyUSB0";
-
-const char* 		gpioPath 				= "/dev/gpiochip0";
+const char* gpioPath 				= "/dev/gpiochip0";
 constexpr uint 	gpio_relay1_line_number	= 26;
 #if USE_GPIO_INTERRUPT
 constexpr uint 	gpio_int_line_number	= 27;
@@ -211,11 +211,10 @@ bool PiCarMgr::begin(){
 	
 	_isRunning = true;
 	
-	// start display
-	if(_display.begin(path_display, B9600)){
+	// start display with I2C
+	if(_display.begin(path_display, 0)) {  // Speed parameter ignored for I2C
 		printf("Display started\n");
-
-		// Test OLED display
+		// Test display
 		_display.clearScreen();
 		_display.setFont(VFD::FONT_10x14);
 		_display.setCursor(0, 0);
@@ -223,7 +222,7 @@ bool PiCarMgr::begin(){
 		_display.setFont(VFD::FONT_MINI);
 		_display.setCursor(0, 20);
 		_display.write("Initializing...");
-		sleep(2);  // Give time to see the display
+		sleep(2);
 	} else {
 		printf("Failed to start Display\n");
 		success = false;
@@ -266,12 +265,7 @@ bool PiCarMgr::begin(){
 #endif
 		startControls();
 		
-		
-		// setup display device
-		if(!_display.begin(path_display,B38400))
-			throw Exception("failed to setup Display ");
-		
-		// set initial brightness?
+		// set initial brightness
 		_display.setKnobBackLight(false);
 		_display.setBrightness(_dimLevel);
 		
@@ -2775,7 +2769,7 @@ void PiCarMgr::tunerDoubleClicked(){
 		 
 }
  
-// MARK: -   Knobs and Buttons
+// MARK: -  Knobs and Buttons
 
 void PiCarMgr::startControls( std::function<void(bool didSucceed, std::string error_text)> cb){
 	int  errnum = 0;

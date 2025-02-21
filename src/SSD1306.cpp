@@ -39,8 +39,8 @@ SSD1306::SSD1306(uint8_t i2cAddress)
 SSD1306::~SSD1306() {
 }
 
-bool SSD1306::begin() {
-    if (!_i2c.begin(_i2cAddress)) {
+bool SSD1306::begin(const char* path) {
+    if (!_i2c.begin(_i2cAddress, path, errno)) {
         ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 I2C begin failed");
         return false;
     }
