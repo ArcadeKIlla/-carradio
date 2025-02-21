@@ -187,25 +187,20 @@ void FrameDB::clearFrames(string_view ifName){
 	
 	for (auto& [key, entry]  : _interfaces)
 		for(auto proto : entry.protocols){
-			proto->reset();
-	}
-
-	
-	if(ifName.empty()){
-		for (auto& [key, entry]  : _interfaces){
-			entry.frames.clear();
+			proto->clearFrames();
 		}
-		
+	
+	// clear all interfaces?
+	if(ifName.empty()){
+		_interfaces.clear();
 		clearValues();
 	}
 	else for (auto& [key, entry]  : _interfaces){
-		if (strcasecmp(key.c_str(), ifName.data()) == 0){
+		if (strcasecmp(key.data(), ifName.data()) == 0){
 			entry.frames.clear();
 			return;
 		}
 	}
-	_lastEtag = 0;
-	_lastValueEtag = 0;
 }
 
  
@@ -213,98 +208,55 @@ void  FrameDB::saveFrame(string_view ifName, can_frame_t frame, unsigned long  t
 	
 	std::lock_guard<std::mutex> lock(_mutex);
 
-	bitset<8> changed;
-	bool isNew = false;
-	long avgTime = 0;
+	// find the interface
+	auto m1 = _interfaces.find(ifName);
+	if(m1 == _interfaces.end())
+		return;
+	
+	auto ifInfo = &m1->second;
+	auto frames = &ifInfo->frames;
+	
+	// calculate time since last frame
 	time_t now = time(NULL);
 	
-	_lastEtag++;
-
-	canid_t can_id = frame.can_id & CAN_ERR_MASK;
-
-	//Error check
-	if(ifName.empty()) {
-		throw Exception("ifName is blank");
-	}
-
-	// create the interface if it doesnt already exist?
-	if(_interfaces.count(ifName) == 0){
-		interfaceInfo_t ifInfo;
-		ifInfo.ifName = ifName;
-		ifInfo.protocols.clear();
-		ifInfo.frames.clear();
-		ifInfo.ifTag = _lastInterfaceTag++;
-		_interfaces[ifName] = ifInfo;
-	}
+	// is this a new frame?
+	bool isNew = frames->count(frame.can_id) == 0;
 	
-		// get the map entry for that interface.
-	auto m1 = _interfaces.find(ifName);
-	auto theFrames = &m1->second.frames;
-	auto theProtocols = &m1->second.protocols;
-
-	size_t count =  theFrames->count(can_id);
-	if( count == 0){
-		// create new frame entry
-		frame_entry entry;
-		entry.frame = frame;
-		entry.timeStamp = timeStamp;
-		entry.avgTime = 0;
-		entry.eTag = _lastEtag;
-		entry.updateTime = now;
+	frame_entry entry;
+	
+	if(!isNew){
+		entry = (*frames)[frame.can_id];
+		
+		// calculate average time
+		long timeDiff = timeStamp - entry.timeStamp;
+		entry.avgTime = ((timeDiff) + entry.avgTime) / 2;
+		
+		// see what changed
 		entry.lastChange.reset();
-		theFrames->insert( std::pair<canid_t,frame_entry>(can_id,entry));
-		isNew = true;
+		for(int i = 0; i < frame.can_dlc; i++){
+			if(frame.data[i] != entry.frame.data[i])
+				entry.lastChange.set(i);
+		}
 	}
 	else {
-		// can ID is already there
-		auto e = theFrames->find(can_id);
-		auto oldFrame = &e->second.frame;
-		
-		if(frame.can_dlc == oldFrame->can_dlc
-			&& memcmp(frame.data, oldFrame->data, frame.can_dlc ) == 0){
-			// frames are same - update timestamp and average
-			long newAvg = ((timeStamp - e->second.timeStamp) + e->second.avgTime) / 2;
-			e->second.timeStamp = timeStamp;
-			e->second.avgTime = newAvg;
-			avgTime =  newAvg;
-		}
-		else {
-			// it changed
-			//did the length change?
-			if(frame.can_dlc != oldFrame->can_dlc) {
-				for(int i = 0; i < frame.can_dlc; i++)
-					changed.set(i);
-			}
-			else {
-				for(int i = 0; i < frame.can_dlc; i++) {
-					if(frame.data[i] != oldFrame->data[i])
-						changed.set(i);
-				}
-			}
-			
-			// either way - update the frame
-			// copy the frame
-			memcpy( oldFrame,  &frame, sizeof(can_frame_t) );
-			
-			//- update timestamp and average
-			long newAvg = ((timeStamp - e->second.timeStamp) + e->second.avgTime) / 2;
-			e->second.timeStamp = timeStamp;
-			e->second.avgTime = newAvg;
-			e->second.eTag = _lastEtag;
-			e->second.updateTime = now;
-			e->second.lastChange = changed;
-			avgTime =  newAvg;
-		}
+		entry.avgTime = 0;
+		entry.lastChange.reset();
 	}
 	
-	// tell the protocols something changed
- 	if(isNew || (changed.count() > 0))
-		for(auto proto : *theProtocols ){
-			proto->processFrame(this, ifName, frame, now );
-		};
+	entry.frame = frame;
+	entry.timeStamp = timeStamp;
+	entry.updateTime = now;
+	entry.eTag = _lastEtag++;
 	
+	(*frames)[frame.can_id] = entry;
+	
+	// process frame with each protocol
+	for(auto proto : ifInfo->protocols){
+		if(proto->shouldProcessFrame(frame)){
+			proto->processFrame(this, string(ifName), frame, now );
+		}
+	}
 }
-
 
 vector<frameTag_t> FrameDB::framesUpdateSinceEtag(string_view ifName, eTag_t eTag, eTag_t *eTagOut ){
 	
@@ -424,25 +376,24 @@ void FrameDB::updateValue(string_view key, string_view value, time_t when){
  
 	if(when == 0)
 		when = time(NULL);
-
+	
 	bool shouldUpdate = true;
 	
-	value = Utils::trim(value);
- 
-	// filter out noise.
 	if(_values.count(key)){
-		auto lastValue = _values[key];
+		auto oldVal = _values[key];
 		
-		if( lastValue.value == value)
+		if(oldVal.value == value)
 			shouldUpdate = false;
 	}
 	
-	if(shouldUpdate)
-		_values[key] = {when, _lastValueEtag++, value};
+	if(shouldUpdate){
+		value_t val = {when, _lastValueEtag++, string(value)};
+		_values[key] = val;
+	}
 	
 	// DEBUG
 	if(shouldUpdate)
-		printf("\t %20s : %s \n", string(key).c_str(), value.data());
+		printf("\t %20s : %s \n", string(key).c_str(), string(value).c_str());
 }
 
 
@@ -622,7 +573,7 @@ bool	 FrameDB::boolForKey(string_view key, bool &state){
 	if(_values.count(key) &&  unitsForKey(key) == BOOL){
 		string str = _values[key].value;
 		
-		const char * param1 = str.c_str();
+		const char * param1 = str.data();
 		int intValue = atoi(param1);
 
 		// check for level
