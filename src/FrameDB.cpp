@@ -187,7 +187,7 @@ void FrameDB::clearFrames(string_view ifName){
 	
 	for (auto& [key, entry]  : _interfaces)
 		for(auto proto : entry.protocols){
-			proto->clearFrames();
+			proto->reset();
 		}
 	
 	// clear all interfaces?
@@ -252,9 +252,7 @@ void  FrameDB::saveFrame(string_view ifName, can_frame_t frame, unsigned long  t
 	
 	// process frame with each protocol
 	for(auto proto : ifInfo->protocols){
-		if(proto->shouldProcessFrame(frame)){
-			proto->processFrame(this, string(ifName), frame, now );
-		}
+		proto->processFrame(this, string(ifName), frame, now );
 	}
 }
 
