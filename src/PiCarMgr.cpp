@@ -143,6 +143,24 @@ PiCarMgr * PiCarMgr::shared() {
 
 
 PiCarMgr::PiCarMgr(){
+	_isSetup = false;
+	_isRunning = false;
+	_autoShutdownMode = false;
+	_shutdownDelay = 0;
+	_autoDimmerMode = false;
+	_dimLevel = 1.0;
+	_isDayTime = true;
+	_clocksync_gps = true;
+	_clocksync_gps_secs = 30;
+	_part_number = "JKR_ECU";
+	_serial_number = "JKR_SERIAL";
+	_canPeriodRadioTaskID = 0;
+	_canPeriodRadio293TaskID = 0;
+	_canPeriodAudioTaskID = 0;
+	_shouldSendRadioCAN = false;
+	_tuner_mode = TUNE_ALL;
+	_display = DisplayMgr(DisplayMgr::OLED_DISPLAY);
+	
 	signal(SIGKILL, sigHandler);
 	signal(SIGHUP, sigHandler);
 	signal(SIGQUIT, sigHandler);
@@ -1502,8 +1520,7 @@ void PiCarMgr::PiCarLoop(){
 			bool tunerWasClicked = false;
 			bool tunerWasDoubleClicked 	= false;
 			bool tunerIsPressed = false;
-			bool tunerWasMoved 	= false;
-	 		bool tunerLongPress 	= false;
+			bool tunerLongPress 	= false;
 
 			// loop until status changes
 			for(;;) {

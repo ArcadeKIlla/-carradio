@@ -339,5 +339,4 @@ private:
 	struct gpiod_line*		_gpio_relay1;
 #endif
 
-	SSD1306_VFD          _oled;  // OLED display
 };
