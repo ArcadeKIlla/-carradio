@@ -142,16 +142,13 @@ PiCarMgr * PiCarMgr::shared() {
 }
 
 
-PiCarMgr::PiCarMgr(){
-	signal(SIGKILL, sigHandler);
-	signal(SIGHUP, sigHandler);
-	signal(SIGQUIT, sigHandler);
-	
-	signal(SIGTERM, sigHandler);
-	signal(SIGINT, sigHandler);
-	
-	std::set_terminate( CRASH_Handler );
-	
+PiCarMgr::PiCarMgr():
+	_isSetup(false),
+	_isRunning(true),
+	_display(DisplayMgr::OLED_DISPLAY),
+	_audio(),
+	_radio(),
+	_db(),
 	_main_menu_map = {
 		{MENU_SELECT_AUDIO_SOURCE,	"Source"},
 		{MENU_AUDIO,	"Audio"},
@@ -163,17 +160,52 @@ PiCarMgr::PiCarMgr(){
 		{MENU_DEBUG, 	"Debug"},
 		{MENU_TIME,		"Time"},
 		{MENU_EXIT, 	 "Exit"}
-	};
+	},
+	_isRunning = true,
+	_lastMenuMode = MENU_UNKNOWN,
+	_lastRadioMode = RadioMgr::MODE_UNKNOWN,
+	_lastFreqForMode.clear(),
+	_tuner_mode = TUNE_ALL,
+	_dimLevel =  1.0, // full
+	_isDayTime = true,
+	_autoDimmerMode = false,
+	_autoShutdownMode = false,
+	_shutdownDelay = UINT16_MAX,
+	_long_press_ms = 750,
+	_clocksync_gps = false,
+	_clocksync_gps_secs = 0,
+	_shouldSendRadioCAN = true,
+	_serial_number = 0,
+	_part_number = 0,
+	_stations.clear(),
+	_preset_stations.clear(),
+	_scanner_freqs.clear(),
+	_w1Map.clear(),
+	_waypoints.clear(),
+	_lastActivityTime = {0,0},
+	_startTime = {0,0},
+	_gpio_chip = NULL,
+	_gpio_relay1 = NULL,
+#if USE_GPIO_INTERRUPT
+	_gpio_line_int = NULL,
+#endif
+	_piCarLoopTID = 0,
+	_canPeriodRadio293TaskID = 0,
+	_canPeriodRadioTaskID = 0,
+	_canPeriodAudioTaskID = 0
+{
+	signal(SIGKILL, sigHandler);
+	signal(SIGHUP, sigHandler);
+	signal(SIGQUIT, sigHandler);
 	
-	_isRunning = true;
+	signal(SIGTERM, sigHandler);
+	signal(SIGINT, sigHandler);
+	
+	std::set_terminate( CRASH_Handler );
 	
 	pthread_create(&_piCarLoopTID, NULL,
 						(THREADFUNCPTR) &PiCarMgr::PiCarLoopThread, (void*)this);
 		
-	_stations.clear();
-	_preset_stations.clear();
-	_scanner_freqs.clear();
-	
 }
 
 PiCarMgr::~PiCarMgr(){
@@ -225,8 +257,10 @@ bool PiCarMgr::begin(){
 		
 		
 		// setup display device
-		if(!_display.begin(path_display,B38400))
-			throw Exception("failed to setup Display ");
+		if(!_display.begin("/dev/i2c-1", B0, error)) {
+			printf("\tFailed to setup Display (%d)\n", error);
+			return false;
+		}
 		
 		// set initial brightness?
 		_display.setKnobBackLight(false);
@@ -1846,6 +1880,7 @@ void PiCarMgr::PiCarLoop(){
 		}
 	}
 	catch ( const Exception& e)  {
+		
 		printf("\tError %d %s\n\n", e.getErrorNumber(), e.what());
 		
 		if(e.getErrorNumber()	 == ENXIO){
@@ -2352,598 +2387,6 @@ void PiCarMgr::displayWaypoint(string uuid){
 	});
 }
 
-void PiCarMgr::displayAudioMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-	
-	vector<string> menu_items = {};
-	
-	char buffer[64] = {0};
-	
-	sprintf(buffer, "\x1d%-9s \x1c%-3d\x1d","Squelch", _radio.getSquelchLevel());
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer, "\x1d%-9s \x1c%3d\x1d","Gain", _radio.getTunerGain());
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer, "\x1d%-9s \x1c%3d\x1d","Balance", int(_audio.balance() * 10));
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer,"\x1d%-9s \x1c%3d\x1d","Fader", int(_audio.fader() * 10));
- 	menu_items.push_back(string(buffer));
-
-	sprintf(buffer,"\x1d%-9s \x1c%3d\x1d","Bass",int(_audio.bass() * 10));
- 	menu_items.push_back(string(buffer));
-
-	sprintf(buffer,"\x1d%-9s \x1c%3d\x1d","Midrange", int(_audio.midrange() * 10));
- 	menu_items.push_back(string(buffer));
- 
-	sprintf(buffer,"\x1d%-9s \x1c%3d\x1d","Treble", int(_audio.treble() * 10));
- 	menu_items.push_back(string(buffer));
-
-	menu_items.push_back("Exit");
-  
-	static uint last_selected_item = 0;
-	
-	_display.showMenuScreen(menu_items,
-									last_selected_item,
-									"Audio",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-			
-			last_selected_item = newSelectedItem;
-			
-				switch (newSelectedItem) {
-						
-					case 0:
-						_display.showSquelchChange();
-						break;
-						
-						
-					case 1:
-						// tuner gain
-					{
-						stringvector choices = {};
-						int current_choice = 0;
-						
-						static std::vector<int> gains =  {};
-						gains = _radio.getTunerGains();
-						gains.push_back(0);
-						
-						sort(gains.begin(), gains.end(),
-							  [] (const int & a,
-									const int & b) { return a < b; });
-						
-						static int gain = _radio.getTunerGain();
-						
-						choices = {};
-						for(int i = 0; i < gains.size(); i++){
-							choices.push_back(to_string(gains[i]));
-							if(gains[i] == gain)
-								current_choice = i;
-						}
-						
-						_display.showSelectionSilderScreen("Tuner Gain",
-																	  choices,
-																	  current_choice,
-																	  5 ,
-																	  [=](double val){
-							// setter
-							gain =  gains[val];
-							_radio.setTunerGain(gain);
-	  						},
-																	  [=](bool didSucceed){
-							// completion
-	 	 						displayAudioMenu();
-						});
-					}
-  						break;
- 
-					case 2:
- 						_display.showSliderScreen("Balance","R","L", 5,
-														  [=](){
-							// getter
-							return _audio.balance();},
-														  [=](double val){
-							// setter
-							_audio.setBalance(val);
-							},
-														  [=](bool didSucceed){
-							// completion
-							
-//							printf("Balance Set %1.1f\n",  _audio.balance());
-							displayAudioMenu();
-						});;
- 
-						break;
-						
-					case 3:
- 						_display.showSliderScreen("Fader","F","R", 5,
-														  [=](){
-							// getter
-							return _audio.fader();},
-														  [=](double val){
-							// setter
-							_audio.setFader(val);
- 					},
-														  [=](bool didSucceed){
-							// completion
-							
-//							printf("Fader Set %1.1f\n",  _audio.fader());
-							displayAudioMenu();
-
-						});;
- 						break;
-	
-					case 4:
-					{
-	 
-						_display.showSliderScreen("Bass","+","-", 5,
-														  [=](){
-							// getter
-							return _audio.bass();},
-														  [=](double val){
-							// setter
-							_audio.setBass(val);
- 						},
-														  [=](bool didSucceed){
-							// completion
-//							printf("Bass Set %1.1f\n",  _audio.bass());
-	 						displayAudioMenu();
- 						});;
-						
-					}
-						break;
-						
-					case 5:
-					{
-	 
-						_display.showSliderScreen("Midrange","+","-", 5,
-														  [=](){
-							// getter
-							return _audio.midrange();},
-														  [=](double val){
-							// setter
-							_audio.setMidrange(val);
-						},
-														  [=](bool didSucceed){
-							// completion
-							
-	//						printf("Midrange Set %1.1f\n",  _audio.midrange());
-							displayAudioMenu();
-						});;
-						
-					}
-						break;
-
-					case 6:
-					{
-	 					_display.showSliderScreen("Treble","+","-", 5,
-														  [=](){
-							// getter
-							return _audio.treble();},
-														  [=](double val){
-							// setter
-							_audio.setTreble(val);
-	 					},
-														  [=](bool didSucceed){
-							// completion
-							
-							// set the database here?
-//							printf("Treble Set %1.1f\n",  _audio.treble());
-							displayAudioMenu();
-
-						});;
-						
-					}
-						break;
-
-	 
-					default:
-						// fall back to main menu
-						displayMenu();
-						break;
-				}
-				
-			}
- 	});
-	
-}
-
-
-void PiCarMgr::displayRadioMenu(){
-	constexpr time_t timeout_secs = 20;
-	int selectedItem = -1;
-	
-	vector<string> menu_items = {
-		"AM",
-		"FM",
-		"VHF",
-		"UHF",
-		"AUX",
-		"AirPlay",
-		"Scanner",
-		"-",
-		"Exit"
-	};
-	
-	switch(_lastRadioMode){
-		case  RadioMgr::BROADCAST_AM:
-			selectedItem = 0;
-			break;
-			
-		case  RadioMgr::BROADCAST_FM:
-			selectedItem = 1;
-			break;
-			
-		case  RadioMgr::VHF:
-			selectedItem = 2;
-			break;
-			
-		case  RadioMgr::UHF:
-			selectedItem = 3;
-			break;
-			
-		case RadioMgr::AUX:
-			selectedItem = 4;
-			break;
-			
-		case RadioMgr::AIRPLAY:
-			selectedItem = 5;
-			break;
-
-		case RadioMgr::SCANNER:
-			selectedItem = 6;
-			break;
-
-		default:
-			selectedItem = 7;
-			break;
-	}
-	
-	_display.showMenuScreen(menu_items,
-									selectedItem,
-									"Audio Source",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-			
-			RadioMgr::radio_mode_t  radioMode  = RadioMgr::MODE_UNKNOWN;
-			
-			bool useScanner = false;
-			
-			switch (newSelectedItem) {
-					
-				case 0: // AM not supported yet
-					//				radioMode  = RadioMgr::BROADCAST_AM;
-					break;
-					
-				case 1: // FM
-					radioMode  = RadioMgr::BROADCAST_FM;
-					break;
-					
-				case 2: // VHF
-					radioMode  = RadioMgr::VHF;
-					break;
-					
-				case 3: // UHF
-					radioMode  = RadioMgr::UHF;
-					break;
-					
-				case 4: // AUX
-					radioMode  = RadioMgr::AUX;
-					break;
-					
-				case 5: // AIRPLAY
-					radioMode  = RadioMgr::AIRPLAY;
-					break;
-					
-				case 6: // SCANNER
-					useScanner = true;
-					break;
-					
-				default:		//ignore
-					break;
-			}
-			
-			// if it was a radio selection, turn it on and select
-			
-			bool saveSetting = false;
-			
-			if(useScanner){
-				_radio.scanChannels(_scanner_freqs);
-				_display.showScannerChange();
-				saveSetting = true;
-			}
-			else if(radioMode != RadioMgr::MODE_UNKNOWN){
-				uint32_t freq;
-				
-				if( ! getSavedFrequencyForMode(radioMode, freq) ){
-					uint32_t maxFreq;
-					RadioMgr:: freqRangeOfMode(radioMode, freq,maxFreq );
-				}
-				
-				_radio.setFrequencyandMode(radioMode, freq, true);
-				_display.showRadioChange();
-				saveSetting = true;
-			}
-			
-			if(saveSetting) {
-				_radio.setON(true);
-				setRelay1(true);
-				
-				saveRadioSettings();
-				_db.savePropertiesToFile();
-				return;
-			}
-		}
-		
-		if(_lastMenuMode != MENU_UNKNOWN){
-			// restore old mode thast was set in main menu
-			setDisplayMode(_lastMenuMode);
-		}
-		else	// fallback
-		{
-			_display.showTime();
-		}
-	});
-};
-
-void PiCarMgr::displayDebugMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-	
-	vector<string> menu_items = {};
-	
-	char buffer[64] = {0};
-	
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","Radio CAN",  _shouldSendRadioCAN?"YES":"NO");
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","Auto Dimmer",  _autoDimmerMode?"YES":"NO");
-	menu_items.push_back(string(buffer));
-
-	sprintf(buffer, "\x1d%-14s \x1c%s\x1d","ClockSync GPS",  _clocksync_gps?"YES":"NO");
-	menu_items.push_back(string(buffer));
- 
-	menu_items.push_back("Exit ");
-	
-	static uint last_selected_item = 0;
-	
-	_display.showMenuScreen(menu_items,
-									last_selected_item,
-									"Debug Values",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-			
-			last_selected_item = newSelectedItem;
-			
-			bool didChangeStuff = true;
-			
-			switch (newSelectedItem) {
-					
-				case 0:
-					_shouldSendRadioCAN = !_shouldSendRadioCAN;
-						break;
-
-				case 1:
-					_autoDimmerMode = !_autoDimmerMode;
-	 				break;
-
-				case 2:
-					_clocksync_gps = !_clocksync_gps;
-					if(_clocksync_gps && _clocksync_gps_secs == 0) _clocksync_gps_secs = 5;
-					break;
-	 
-				default:
-					didChangeStuff = false;
-					// fall back to main menu
- 					break;
-			}
-			if(didChangeStuff){
-				saveRadioSettings();
-				displayDebugMenu();
- 			}
-			else {
-				displayMenu();
-				
-			}
-		}
-	});
-	
-}
-
-vector<string> PiCarMgr::settingsMenuItems(){
-	string dim_entry = _autoDimmerMode ? "Dim Screen (auto)": "Dim Screen";
- 
-	vector<string> menu_items = {
-		dim_entry,
-		"Shutdown Delay",
-		"Set ECU Time",
-		"Info",
-		"Exit",
-	};
-
-	return menu_items;
-}
-
-void PiCarMgr::displaySettingsMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-		
-	_display.showMenuScreen(settingsMenuItems(),
-									2,
-									"Settings",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed) {
-			
-			if(action){
-				switch (newSelectedItem) {
-						
-					case 0:
-						if(action == DisplayMgr::KNOB_CLICK){
-							if(!_autoDimmerMode)
-								_display.showDimmerChange();
- 						}
-						else if(action == DisplayMgr::KNOB_DOUBLE_CLICK){
-							_autoDimmerMode = !_autoDimmerMode;
-							_display.updateMenuItems(settingsMenuItems());
- 						}
-						break;
-
-					case 1:
-						displayShutdownMenu();
-						break;
-						
-					case 2:
-					{
-						struct timespec  gpsTime;
-						
-						bool success = false;
-						if( _gps.GetTime(gpsTime)) {
-							success = setECUtime(gpsTime);
-						}
-						_display.showMessage( success?"Set Time Succeeed":"Set Time Failed" , 2,[=](){
-							displayMenu();
-						});
-						
-					}
-						break;
-
-					case 3:
-						_display.showInfo();
-						break;
- 
-			 
-					default:
-						displayMenu();
-						break;
-				}
-				
-			}
-			
-		}
-	});
-	
-}
-
-
-void PiCarMgr::displayShutdownMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-	
-
-	vector<string> menu_items = {
-		"Manual",
-		"10 Seconds",
-		"20 Seconds",
-		"30 Seconds",
-		"1 Minute",
-		"Now",
-		"-",
-		"Exit"
-	};
-	
-	uint intitialItem = (uint) menu_items.size() -1;
-		
-	if(!_autoShutdownMode) {
-		intitialItem = 0;
-	}
-	else {
-		if(_shutdownDelay < 11) intitialItem = 1;
-		else if(_shutdownDelay < 21) intitialItem = 2;
-		else if(_shutdownDelay < 31) intitialItem = 3;
-	}
-
-	_display.showMenuScreen(menu_items,
-									intitialItem,
-									"Shutdown Delay",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed) {
-			
-			if(action){
-				
-				bool didupdate = true;
-				
-				switch (newSelectedItem) {
-						
-					case 0:
-						_autoShutdownMode = false;
-						break;
-
-					case 1:
-						_autoShutdownMode = true;
-						_shutdownDelay = 10;
-						break;
-
-						
-					case 2:
-						_autoShutdownMode = true;
-						_shutdownDelay = 20;
-						break;
- 
-					case 3:
-						_autoShutdownMode = true;
-						_shutdownDelay = 30;
-						break;
-						
-					case 4:
-						_autoShutdownMode = true;
-						_shutdownDelay = 60;
-						break;
-
-					case 5:
-						didupdate = false;
-						doShutdown();
-						break;
-						
-					default:
-						
-						didupdate = false;
-					break;
-				}
-				
-				
-				if(_lastMenuMode != MENU_UNKNOWN){
-					// restore old mode thast was set in main menu
-					setDisplayMode(_lastMenuMode);
-				}
-				else	// fallback
-				{
-					_display.showTime();
-				}
-
-				
-				if(didupdate) {
-					saveRadioSettings();
-					_db.savePropertiesToFile();
-				}
-			}
-			
-		}
-	});
-	
-}
-
 void PiCarMgr::scannerDoubleClicked(){
 	
 	if(_radio.isScannerMode()){
@@ -3217,7 +2660,6 @@ done:
 	if(cb)
 		(cb)(didSucceed, didSucceed?"": string(strerror(errnum) ));
 }
-
 
 void PiCarMgr::stopControls(){
 	
