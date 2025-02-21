@@ -5289,5 +5289,5 @@ void* DisplayMgr::MetaDataReaderThread(void *context){
 void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	//GPSmgr* d = (GPSmgr*)context;
 	
-	printf("cleanup GPSReader\n");
+	printf("cleanup MetaDataReader\n");
 }
