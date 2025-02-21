@@ -149,16 +149,6 @@ PiCarMgr::PiCarMgr():
 	_audio(),
 	_radio(),
 	_db(),
-	_main_menu_map = {
-		{MENU_SELECT_AUDIO_SOURCE, "Source"},
-		{MENU_AUDIO, "Audio"},
-		{MENU_SETTINGS, "Settings"},
-		{MENU_SCANNER_CHANNELS, "Scanner"},
-		{MENU_GPS, "GPS"},
-		{MENU_DEBUG, "Debug"},
-		{MENU_TIME, "Time"},
-		{MENU_EXIT, "Exit"}
-	},
 	_isRunning = true,
 	_lastMenuMode = MENU_UNKNOWN,
 	_lastRadioMode = RadioMgr::MODE_UNKNOWN,
@@ -192,6 +182,17 @@ PiCarMgr::PiCarMgr():
 	_canPeriodRadioTaskID = 0,
 	_canPeriodAudioTaskID = 0
 {
+	_main_menu_map = {
+		{MENU_SELECT_AUDIO_SOURCE, "Source"},
+		{MENU_AUDIO, "Audio"},
+		{MENU_SETTINGS, "Settings"},
+		{MENU_SCANNER_CHANNELS, "Scanner"},
+		{MENU_GPS, "GPS"},
+		{MENU_DEBUG, "Debug"},
+		{MENU_TIME, "Time"},
+		{MENU_EXIT, "Exit"}
+	};
+	
 	signal(SIGKILL, sigHandler);
 	signal(SIGHUP, sigHandler);
 	signal(SIGQUIT, sigHandler);
@@ -2391,10 +2392,9 @@ void PiCarMgr::scannerDoubleClicked(){
 		
 		_radio.pauseScan(true);
 		
-		RadioMgr::radio_mode_t  mode;
-		uint32_t						freq;
-		_radio.getCurrentScannerChannel(mode, freq);
- 
+		RadioMgr::radio_mode_t  mode  = _radio.radioMode();
+		uint32_t						freq =  _radio.frequency();
+		
 		displayScannerChannels({mode,freq});
 	}
 		 
