@@ -481,7 +481,7 @@ void DisplayMgr::runLEDEventTuner(){
 	}
 	
 	if(didPin) {
-		for (int i = 0 ; i < 24; i++){
+		for (int i = 0 ; i < 24; i++) {
 			if( i == offset){
 				_rightRing.setColor(i, 16, 16, 16);
 			}
@@ -597,7 +597,6 @@ void DisplayMgr::LEDUpdateLoop(){
 				clock_gettime(TIMEDWAIT_CLOCK, &ts1);
 				printf("LEDUpdateLoop:  pthread_cond_timedwait delay = %ld\n",
 						 timespec_to_ms(timespec_sub(ts1, now)));
-				
 #endif
 				
 				break;
@@ -651,10 +650,8 @@ void* DisplayMgr::LEDUpdateThread(void *context){
 
 
 void DisplayMgr::LEDUpdateThreadCleanup(void *context){
-	//	DisplayMgr* d = (DisplayMgr*)context;
-	
-	//	printf("cleanup display\n");
 }
+
 
 // MARK: -  display tools
 
@@ -864,6 +861,16 @@ void DisplayMgr::showDTCInfo(string code){
 	setEvent(EVT_PUSH, MODE_DTC_INFO, code);
 }
 
+void DisplayMgr::showGPS(knobCallBack_t cb){
+	_knobCB = cb;
+	setEvent(EVT_PUSH, MODE_GPS);
+}
+
+void DisplayMgr::showCANbus(uint8_t page){
+	_currentPage = page;
+	setEvent(EVT_PUSH, MODE_CANBUS);
+}
+
 void DisplayMgr::showMessage(string message,  time_t timeout, voidCallback_t cb){
 	_simpleCB = cb;
 	_menuTitle = message;
@@ -911,10 +918,16 @@ void DisplayMgr::setEvent(event_t evt,
 bool  DisplayMgr::usesSelectorKnob(){
 	switch (_current_mode) {
 		case MODE_CANBUS:
+		case MODE_GPS:
+		case MODE_GPS_WAYPOINT:
+		case MODE_CHANNEL_INFO:
+		case MODE_GPS_WAYPOINTS:
+		case MODE_SCANNER_CHANNELS:
 		case MODE_DIMMER:
 		case MODE_SQUELCH:
 		case MODE_EDIT_STRING:
 		case MODE_DTC:
+		case MODE_DTC_INFO:
 		case MODE_MENU:
 		case MODE_SLIDER:
 		case MODE_SELECT_SLIDER:
@@ -965,12 +978,17 @@ bool DisplayMgr::selectorKnobAction(knob_action_t action){
 }
 
 uint8_t DisplayMgr::pageCountForMode(mode_state_t mode){
-	
 	uint8_t count = 1;
+	
+	PiCarMgr*			mgr 	= PiCarMgr::shared();
 	
 	switch (mode) {
 		case MODE_CANBUS:
-			count = 2;
+		{
+			PiCarDB*		db 	= mgr->db();
+			div_t d = div(db->canbusDisplayPropsCount(), 6);
+			count +=  d.quot + (d.rem ? 1 : 0);
+		}
 			break;
 			
 		default :
@@ -1022,8 +1040,28 @@ bool DisplayMgr::processSelectorKnobAction( knob_action_t action){
 			wasHandled = processSelectorKnobActionForDTC(action);
 			break;
 			
+		case MODE_GPS_WAYPOINTS:
+			wasHandled = processSelectorKnobActionForGPSWaypoints(action);
+			break;
+			
+		case MODE_GPS_WAYPOINT:
+			wasHandled = processSelectorKnobActionForGPSWaypoint(action);
+			break;
+			
+		case MODE_GPS:
+			wasHandled = processSelectorKnobActionForGPS(action);
+			break;
+			
+		case MODE_DTC_INFO:
+			wasHandled = processSelectorKnobActionForDTCInfo(action);
+			break;
+			
 		case MODE_EDIT_STRING:
 			wasHandled = processSelectorKnobActionForEditString(action);
+			break;
+			
+		case MODE_SCANNER_CHANNELS:
+			wasHandled = processSelectorKnobActionForScannerChannels(action);
 			break;
 			
 		case MODE_INFO:
@@ -1031,8 +1069,8 @@ bool DisplayMgr::processSelectorKnobAction( knob_action_t action){
 			break;
 
 			
-		case MODE_MENU:
-			wasHandled = menuSelectAction(action);
+		case MODE_CHANNEL_INFO:
+			wasHandled = processSelectorKnobActionForChannelInfo(action);
 			break;
 			
 		default:
@@ -1235,6 +1273,8 @@ bool DisplayMgr::isStickyMode(mode_state_t md){
 		case MODE_TIME:
 		case MODE_RADIO:
 		case MODE_SCANNER:
+		case MODE_GPS:
+		case MODE_GPS_WAYPOINT:
 		case MODE_INFO:
 		case MODE_CANBUS:
 		case MODE_CHANNEL_INFO:
@@ -1380,12 +1420,198 @@ void DisplayMgr::DisplayUpdateLoop(){
 						shouldUpdate = true;
 					}
 				}
+				
+				else if(_current_mode == MODE_GPS_WAYPOINTS) {
+					// check for {EVT_NONE,MODE_GPS_WAYPOINTS}  which is a scroll change
+					if(item.mode == MODE_GPS_WAYPOINTS) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					// check for  timeout delay
+					else if(_menuTimeout > 0 && diff.tv_sec >= _menuTimeout){
+						// timeout pop mode?
+						popMode();
+						shouldRedraw = true;
+						shouldUpdate = true;
+					}
+				}
+				else if(_current_mode == MODE_SCANNER_CHANNELS) {
+					// check for {EVT_NONE,MODE_SCANNER_CHANNELS}  which is a scroll change
+					if(item.mode == MODE_SCANNER_CHANNELS) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					// check for  timeout delay
+					else if(_menuTimeout > 0 && diff.tv_sec >= _menuTimeout){
+						// timeout pop mode?
+						
+						auto savedCB = _scannnerChannelsCB;
+						_scannnerChannelsCB = NULL;
+						shouldRedraw = false;
+						shouldUpdate = false;
+						//
+						if(savedCB) {
+							savedCB(false, {RadioMgr::MODE_UNKNOWN, 0}, KNOB_EXIT);
+						}
+						
+						popMode();
+						shouldRedraw = true;
+						shouldUpdate = true;
+					}
+				}
+				else if(_current_mode == MODE_MESSAGE) {
+					if(item.mode == MODE_MESSAGE) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					// check for  timeout delay
+					else if(_menuTimeout > 0 && diff.tv_sec >= _menuTimeout){
+						// timeout pop mode?
+						auto savedCB = _simpleCB;
+						//					popMode();
+						_knobCB = NULL;
+						shouldRedraw = false;
+						shouldUpdate = false;
+						//
+						if(savedCB) {
+							savedCB();
+						}
+					}
+				}
+				else if(_current_mode == MODE_SLIDER) {
+					
+					auto * cb = _menuSliderCBInfo;
+					if(cb){
+						// check for {EVT_NONE,MODE_SLIDER}  which is a slider change
+						if(item.mode == MODE_SLIDER) {
+							clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+							shouldRedraw = false;
+							shouldUpdate = true;
+						}
+						else if(diff.tv_sec >=  cb->timeout){
+							// timeout pop mode?
+							popMode();
+							shouldRedraw = true;
+							shouldUpdate = true;
+						}
+					}
+				}
 
+				else if(_current_mode == MODE_SELECT_SLIDER) {
+					
+					auto * cb = _menuSelectionSliderCBInfo;
+					if(cb){
+						// check for {EVT_NONE,MODE_SLIDER}  which is a slider change
+						if(item.mode == MODE_SELECT_SLIDER) {
+							clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+							shouldRedraw = false;
+							shouldUpdate = true;
+						}
+						else if(diff.tv_sec >=  cb->timeout){
+							// timeout pop mode?
+							popMode();
+							shouldRedraw = true;
+							shouldUpdate = true;
+						}
+					}
+				}
+ 
+				else if(_current_mode == MODE_SQUELCH) {
+					
+					// check for {EVT_NONE,MODE_SQUELCH}  which is a squelch change
+					if(item.mode == MODE_SQUELCH) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					else if(diff.tv_sec >=  5){
+						// timeout pop mode?
+						popMode();
+						shouldRedraw = true;
+						shouldUpdate = true;
+					}
+				}
+				
+				else if(_current_mode == MODE_DIMMER) {
+					
+					// check for {EVT_NONE,MODE_DIMMER}  which is a dimmer change
+					if(item.mode == MODE_DIMMER) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					else if(diff.tv_sec >=  5){
+						// timeout pop mode?
+						popMode();
+						shouldRedraw = true;
+						shouldUpdate = true;
+					}
+				}
+				
+				else if(_current_mode == MODE_SCANNER) {
+					
+					// check for {EVT_NONE,MODE_SCANNER}  which is a squelch change
+					if(item.mode == MODE_SCANNER) {
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+				}
+				
+				else if(_current_mode == MODE_RADIO) {
+					
+					// check for {EVT_NONE,MODE_RADIO}  which is a airplay change
+					if(item.mode == MODE_RADIO) {
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+				}
+				
+				else if(_current_mode == MODE_MENU) {
+					
+					// check for {EVT_NONE,MODE_MENU}  which is a menu change
+					if(item.mode == MODE_MENU) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					// check for menu timeout delay
+					else if(_menuTimeout > 0 && diff.tv_sec >= _menuTimeout){
+						if(!isStickyMode(_current_mode)){
+							popMode();
+							
+							if(_menuCB) {
+								_menuCB(false, 0, KNOB_EXIT);
+							}
+							resetMenu();
+							shouldRedraw = true;
+							shouldUpdate = true;
+						}
+					}
+				}
+				else if(_current_mode == MODE_DTC_INFO) {
+					
+					// check for {EVT_NONE,MODE_DTC_INFO}  which is a click
+					if(item.mode == MODE_DTC_INFO) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
+						shouldRedraw = false;
+						shouldUpdate = true;
+					}
+					// give it 10 seconds
+					else if(diff.tv_sec >=  10){
+						// timeout pop mode?
+						popMode();
+						shouldRedraw = true;
+						shouldUpdate = true;
+					}
+				}
 				else if(_current_mode == MODE_INFO) {
 					
-					// check for {EVT_NONE,MODE_INFO}  which is a scroll change
-					if(item.mode == MODE_INFO) {
-						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);
+					// check for {EVT_NONE,MODE_INFO}  which is a click
+					if(item.mode == MODE_DTC_INFO) {
+						clock_gettime(CLOCK_MONOTONIC, &_lastEventTime);;
 						shouldRedraw = false;
 						shouldUpdate = true;
 					}
@@ -1559,8 +1785,36 @@ void DisplayMgr::drawMode(modeTransition_t transition,
 				drawMenuScreen(transition);
 				break;
 				
-			case MODE_INFO:
-				drawInfoScreen(transition);
+			case MODE_GPS:
+				drawGPSScreen(transition);
+				break;
+				
+			case MODE_GPS_WAYPOINTS:
+				drawGPSWaypointsScreen(transition);
+				break;
+				
+			case MODE_GPS_WAYPOINT:
+				drawGPSWaypointScreen(transition);
+				break;
+				
+			case MODE_MESSAGE:
+				drawMessageScreen(transition);
+				break;
+				
+			case MODE_SCANNER_CHANNELS:
+				drawScannerChannels(transition);
+				break;
+				
+			case MODE_CHANNEL_INFO:
+				drawChannelInfo(transition);
+				break;
+				
+			case MODE_DTC:
+				drawDTCScreen(transition);
+				break;
+				
+			case MODE_DTC_INFO:
+				drawDTCInfoScreen(transition, eventArg);
 				break;
 				
 			case MODE_CANBUS:
@@ -1574,12 +1828,8 @@ void DisplayMgr::drawMode(modeTransition_t transition,
 				drawEditStringScreen(transition);
 				break;
 				
-			case MODE_DTC:
-				drawDTCScreen(transition);
-				break;
-				
-			case MODE_DTC_INFO:
-				drawDTCInfoScreen(transition, eventArg);
+			case MODE_INFO:
+				drawInfoScreen(transition);
 				break;
 				
 			case MODE_UNKNOWN:
@@ -1754,7 +2004,7 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					uint8_t buff2[] = {
 						VFD::VFD_CLEAR_AREA,
 						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY-16),
-						static_cast<uint8_t> (0+100),static_cast<uint8_t> (centerY+4)};
+						static_cast<uint8_t> (128),static_cast<uint8_t> (centerY+4)};
 					_vfd->writePacket(buff2, sizeof(buff2));
 					
 					string str = "- NOT PLAYING -";
@@ -1966,6 +2216,7 @@ void DisplayMgr::drawStartupScreen(modeTransition_t transition){
 	if(transition == TRANS_ENTERING || transition == TRANS_REFRESH){
 		PiCarMgr*			mgr 	= PiCarMgr::shared();
 		RadioMgr*			radio 	= mgr->radio();
+		GPSmgr*				gps 		= mgr->gps();
 		PiCarCAN*			can 		= mgr->can();
 		
 		string str = "";
@@ -1976,6 +2227,10 @@ void DisplayMgr::drawStartupScreen(modeTransition_t transition){
 		
 		if(mgr->isAirPlayRunning()){
 			str += " AIRPLAY ";
+		}
+		
+		if(gps->isConnected()){
+			str += " GPS ";
 		}
 		
 		if(can->isConnected()){
@@ -2022,7 +2277,7 @@ void DisplayMgr::drawDeviceStatus(){
 	uint8_t row = 10;
 	
 	RadioMgr*	radio 	= PiCarMgr::shared()->radio();
-	PiCarCAN*	can 		= PiCarMgr::shared()->can();
+	GPSmgr*	gps 		= PiCarMgr::shared()->gps();
 	
 	row+=2;
 	
@@ -2046,12 +2301,12 @@ void DisplayMgr::drawDeviceStatus(){
 	
 	memset(buffer, ' ', sizeof(buffer));
 	row += 8; _vfd->setCursor(col, row);
-	if(can->isConnected()){
-		sprintf( buffer ,"\xBA CANBUS OK");
+	if(gps->isConnected()){
+		sprintf( buffer ,"\xBA GPS OK");
 		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	else {
-		sprintf( buffer ,"X CANBUS FAIL");
+		sprintf( buffer ,"X GPS FAIL");
 		_vfd->writePacket( (const uint8_t*) buffer,21);
 	}
 	
@@ -2430,13 +2685,160 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 
 
 
+void DisplayMgr::drawGPSScreen(modeTransition_t transition){
+	
+	uint8_t col = 0;
+	uint8_t row = 7;
+	string str;
+	
+	uint8_t width = _vfd->width();
+	uint8_t midX = width/2;
+	
+	uint8_t utmRow = row;
+	uint8_t altRow = utmRow+30;
+	
+	GPSmgr*	gps 	= PiCarMgr::shared()->gps();
+	
+	if(transition == TRANS_ENTERING) {
+		_vfd->clearScreen();
+		
+		// draw titles
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,utmRow);
+		_vfd->printPacket("COORDINATES");
+		
+		_vfd->setCursor(2,altRow);
+		_vfd->printPacket("ALTITUDE");
+		
+		_vfd->setCursor(midX +20 ,utmRow+10);
+		_vfd->printPacket("HEADING");
+		
+		_vfd->setCursor(midX +20 ,altRow);
+		_vfd->printPacket("SPEED");
+		
+	}
+	
+	if(transition == TRANS_LEAVING) {
+		return;
+	}
+	
+	
+	GPSLocation_t location;
+	if(gps->GetLocation(location)){
+		char coordStr[32];
+		snprintf(coordStr, sizeof(coordStr), "%.6f, %.6f", location.latitude, location.longitude);
+		
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->setCursor(col+7, utmRow+10);
+		_vfd->printPacket("%s", coordStr);
+		
+		if(location.altitudeIsValid)  {
+			_vfd->setCursor(col+30, altRow+10);
+			constexpr double  M2FT = 	3.2808399;
+			_vfd->printPacket("%-5.1f",location.altitude * M2FT);
+		}
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(0,60)	;
+		_vfd->printPacket( "SATS: %2d ",  location.numSat);
+		
+		_vfd->setCursor(midX +20,60)	;
+		_vfd->printPacket( "DOP: %-2.1f ",  location.DOP/10.);
+		
+	}
+	
+	static int	last_heading = INT_MAX;
+	_vfd->setFont(VFD::FONT_5x7);
+	
+	GPSVelocity_t velocity;
+	if(gps->GetVelocity(velocity)){
+		char buffer[8];
+		
+		//		printf("3  %f mph %f deg\n",  velocity.speed * 1.150779 , velocity.heading);
+		
+		//save heading
+		last_heading  = int(velocity.heading);
+		
+		memset(buffer, ' ', sizeof(buffer));
+		double mph = velocity.speed * 1.15078;  // knots to mph
+		sprintf( buffer , "%3d mph", (int)floor(mph));
+		_vfd->setCursor(midX +20 ,altRow+10);
+		_vfd->printPacket("%-8s ", buffer);
+	}
+	
+	
+	if( last_heading != INT_MAX){
+		char buffer[12];
+		
+		string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
+		string dir = ordinal[int(floor((last_heading / 45) + 0.5)) % 8]  ;
+		
+		memset(buffer, ' ', sizeof(buffer));
+		sprintf( buffer , "%3d\xa0\x1c%2s\x1d ",last_heading, dir.c_str());
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", buffer);
+	}
+	else {
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", "---");
+	}
+	
+	drawTimeBox();
+}
+
+
+void DisplayMgr::drawTimeBox(){
+	// Draw time
+	
+	time_t rawtime;
+	struct tm timeinfo = {0};
+	
+	time(&rawtime);
+	localtime_r(&rawtime, &timeinfo); // fills in your structure,
+	// instead of returning a pointer to a static
+	
+	char timebuffer[16] = {0};
+	std::strftime(timebuffer, sizeof(timebuffer)-1, "%2l:%M%P", &timeinfo);
+	_vfd->setFont(VFD::FONT_5x7);
+	_vfd->setCursor(_vfd->width() - (strlen(timebuffer) * 6) ,7);
+	_vfd->write(timebuffer);
+	
+}
+
+// MARK: -  Info Screen
+
+static std::string short_build_date() {
+	std::ostringstream oss;
+
+	char mo[4] = {0};
+	int day = 0;
+	int year = 0;
+
+ 
+	int hour = 0;
+	int min = 0;
+ 
+	if( sscanf(__DATE__, "%3s %d %d", (char*)&mo,&day,&year) == 3){
+		oss << to_string(day) << "-" <<  string(mo)  << "-" << to_string(year) << " ";
+	}
+
+	if( sscanf(__TIME__, "%d:%d", &hour,&min) == 2){
+		oss << std::setw(2) <<  std::setfill('0') <<  to_string(hour) << ":" << to_string(min);
+	}
+ 
+	return oss.str();
+}
+
 void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 	
 	string str;
  
 	PiCarMgr*			mgr 	= PiCarMgr::shared();
 	PiCarDB*				db 		= mgr->db();
-	
+#if USE_COMPASS
+	CompassSensor* 	compass	= mgr->compass();
+#endif
+ 
 	static int lastOffset = 0;
 	static int firstLine = 0;
 	static vector<vector<string>> rows = {};
@@ -2553,6 +2955,10 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 			}
 		}
 		
+		/* GPS Status*/
+		GPSmgr*				gps 		= mgr->gps();
+		rows.push_back( {"GPS", gps->isConnected()?"OK":"NOT CONNECTED"} );
+		
 		/* CAN BUS*/
 		{
 			PiCarCAN*			can 		= mgr->can();
@@ -2610,7 +3016,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 			firstLine = max(firstLine - 1,  0);
 		}
 		
-		_vfd->printRows(20, 9, rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
+		_vfd->printRows(20, 9 , rows, firstLine, displayedLines, col1_start, VFD::FONT_MINI);
 		
 		if(rows.size() > displayedLines){
 			
@@ -2620,7 +3026,6 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 		_vfd->drawScrollBar(11, bar_height ,offset);
 		}
 	}
-	drawTimeBox();
 }
 
 
@@ -2669,7 +3074,7 @@ void DisplayMgr::drawScannerScreen(modeTransition_t transition){
 	
 	
 	// 	printf("drawScannerScreen(%d)\n", transition);
-	
+	//	int centerX = _vfd->width() /2;
 	int centerY = _vfd->height() /2;
 	
 	if(transition == TRANS_ENTERING){
@@ -2754,8 +3159,6 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 	uint8_t rightbox 	= width - 20;
 	uint8_t topbox 	= midY -5 ;
 	uint8_t bottombox = midY + 5 ;
-	
-	//	printf("drawDimmerScreen(%d)\n", transition);
 	
 	if(transition == TRANS_LEAVING) {
 		return;
@@ -3743,6 +4146,728 @@ void DisplayMgr::drawEditStringScreen(modeTransition_t transition){
 }
 
 
+// MARK: -  GPS waypoints
+
+
+bool DisplayMgr::processSelectorKnobActionForGPS( knob_action_t action){
+	bool wasHandled = false;
+	
+	auto savedCB = _knobCB;
+	
+	if(action == KNOB_DOUBLE_CLICK){
+		
+		popMode();
+		_knobCB = NULL;
+		wasHandled = true;
+		
+		if(savedCB) {
+			savedCB(action);
+		}
+	}
+	
+	return wasHandled;
+}
+
+void DisplayMgr::showWaypoints(string intitialUUID,
+										 time_t timeout,
+										 showWaypointsCallBack_t cb ){
+	
+	_lineOffset = 0;
+	
+	// set _lineOffset to proper entry
+	if(! intitialUUID.empty()){
+		PiCarMgr*		mgr 	= PiCarMgr::shared();
+		auto wps 	= mgr->getWaypoints();
+		
+		for( int i = 0; i< wps.size(); i++){
+			if(wps[i].uuid == intitialUUID){
+				_lineOffset = i;
+				break;
+			}
+		}
+	}
+	_wayPointCB = cb;
+	_menuTimeout = timeout;
+	
+	setEvent(EVT_PUSH, MODE_GPS_WAYPOINTS);
+}
+
+void DisplayMgr::showWaypoint(string uuid, showWaypointsCallBack_t cb ){
+	
+	if(! uuid.empty()){
+		PiCarMgr*		mgr 	= PiCarMgr::shared();
+		auto wps 	= mgr->getWaypoints();
+		
+		for( int i = 0; i< wps.size(); i++){
+			if(wps[i].uuid == uuid){
+				_lineOffset = i;
+				break;
+			}
+		}
+		_wayPointCB = cb;
+		setEvent(EVT_PUSH, MODE_GPS_WAYPOINT);
+	}
+}
+
+//typedef std::function<void(bool didSucceed, string uuid, knob_action_t action)> showWaypointsCallBack_t;
+
+bool DisplayMgr::processSelectorKnobActionForGPSWaypoints( knob_action_t action){
+	bool wasHandled = false;
+	
+	switch(action){
+			
+		case KNOB_EXIT:
+			if(_wayPointCB) {
+				_wayPointCB(false, "", action);
+			}
+			setEvent(EVT_POP, MODE_UNKNOWN);
+			_wayPointCB = NULL;
+			_lineOffset = 0;
+			break;
+			
+		case KNOB_UP:
+			if(_lineOffset < 255){
+				_lineOffset++;
+				setEvent(EVT_NONE,MODE_GPS_WAYPOINTS);
+			}
+			wasHandled = true;
+			break;
+			
+		case KNOB_DOWN:
+			if(_lineOffset != 0) {
+				_lineOffset--;
+				setEvent(EVT_NONE,MODE_GPS_WAYPOINTS);
+			}
+			wasHandled = true;
+			break;
+			
+		case KNOB_CLICK:
+		case KNOB_DOUBLE_CLICK:
+		{
+			PiCarMgr*	mgr 	= PiCarMgr::shared();
+			auto wps 	= mgr->getWaypoints();
+			bool success = false;
+			
+			auto savedCB = _wayPointCB;
+			string uuid = "";
+			
+			if(_lineOffset < wps.size()) {
+				uuid = wps[_lineOffset].uuid;
+				success = true;
+			};
+			
+			popMode();
+			_wayPointCB = NULL;
+			_lineOffset = 0;
+			
+			if(savedCB) {
+				savedCB(success, uuid, action);
+			}
+			
+			if(!success)
+				setEvent(EVT_REDRAW, _current_mode);
+			
+			wasHandled = true;
+		}
+			break;
+			
+		default: break;
+			
+	}
+	
+	return wasHandled;
+}
+
+
+void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
+	
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	GPSmgr*			gps 	= mgr->gps();
+	
+	constexpr int displayedLines = 5;
+	
+	static int lastOffset = 0;
+	static int firstLine = 0;
+	
+	bool needsRedraw = false;
+	
+	if(transition == TRANS_LEAVING) {
+		
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		lastOffset = 0;
+		firstLine = 0;
+		return;
+	}
+	
+	auto wps 	= mgr->getWaypoints();
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("Waypoints");
+		
+		// safety check
+		if(_lineOffset >=  wps.size())
+			_lineOffset = 0;
+		
+		lastOffset = INT_MAX;
+		firstLine = 0;
+		needsRedraw = true;
+	}
+	
+	// check for change in gps offsets ?
+	// if anything changed, needsRedraw = true
+	
+	if( lastOffset != _lineOffset){
+		lastOffset = _lineOffset;
+		needsRedraw = true;
+	}
+	
+	if(needsRedraw){
+		needsRedraw = false;
+		
+		GPSLocation_t here;
+		here.isValid = false;
+		here.altitudeIsValid = false;
+		gps->GetLocation(here);
+ 
+ 		vector<vector<string>> rows = {};
+
+		size_t totalLines = wps.size() + 1;  // add kEXIT and kNEW_WAYPOINT
+		
+		if(_lineOffset > totalLines -1)
+			_lineOffset = totalLines -1;
+		
+		// framer code
+		if( (_lineOffset - displayedLines + 1) > firstLine) {
+			firstLine = _lineOffset - displayedLines + 1;
+		}
+		else if(_lineOffset < firstLine) {
+			firstLine = max(firstLine - 1,  0);
+		}
+		
+		// create lines
+		for(auto i = 0 ; i < totalLines; i++){
+			
+			stringvector row = {};
+			
+			string line = "";
+			string distance  = "";
+
+			bool isSelected = i == _lineOffset;
+			
+			if(i < wps.size()) {
+				auto wp = wps[i];
+				string name = wp.name;
+				
+				auto nameLen = name.size();
+			
+				if(nameLen> 16)
+					name = truncate(name,  16) + "  ";		// not too many
+		
+				 if(nameLen < 18)
+					 name += string(18-nameLen, ' ');
+	 
+ 				std::transform(name.begin(), name.end(),name.begin(), ::toupper);
+				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") +  name;
+				
+				if(here.isValid){
+				  auto r = GPSmgr::dist_bearing(here,wp.location);
+					distance = distanceString(r.first * 0.6213711922);
+					std::transform(distance.begin(), distance.end(),distance.begin(), ::toupper);
+	 			}
+ 			}
+			else {
+				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") + " EXIT   " ;
+			}
+	 
+			row = {line,distance};
+ 			rows.push_back(row);
+		}
+		
+ 		_vfd->printRows(20, 9, rows, firstLine, displayedLines, VFD::FONT_MINI);
+		
+		if(rows.size() > displayedLines){
+			
+			float bar_height =  (float)(displayedLines +1)/ (float)rows.size() ;
+			float offset =  (float)_lineOffset / ((float)rows.size() -1) ;
+			
+			_vfd->drawScrollBar(11, bar_height ,offset);
+		}
+	}
+	
+	drawTimeBox();
+}
+
+
+bool DisplayMgr::processSelectorKnobActionForGPSWaypoint( knob_action_t action){
+	bool wasHandled = false;
+	
+	
+	string uuid = "";
+	
+	PiCarMgr*	mgr 	= PiCarMgr::shared();
+	auto wps 	= mgr->getWaypoints();
+	
+	if(_lineOffset < wps.size()){
+		auto wp = wps[_lineOffset];
+		uuid = wp.uuid;
+	}
+	
+	auto savedCB = _wayPointCB;
+	
+	if(action == KNOB_CLICK ||  action == KNOB_DOUBLE_CLICK){
+		
+		popMode();
+		_wayPointCB = NULL;
+		_lineOffset = 0;
+		wasHandled = true;
+		
+		if(savedCB) {
+			savedCB(false, uuid, action);
+		}
+	}
+	
+	return wasHandled;
+}
+
+void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
+	
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	GPSmgr*			gps 	= mgr->gps();
+	
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
+	
+	uint8_t midX = width/2;
+	static int	last_heading = INT_MAX;
+	
+	if(transition == TRANS_LEAVING) {
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		return;
+	}
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		_vfd->clearScreen();
+		last_heading = INT_MAX;
+	}
+	
+	// find waypoint with uuid
+	auto wps = mgr->getWaypoints();
+	
+	if(_lineOffset < wps.size()){
+		auto wp = wps[_lineOffset];
+		string name = wp.name;
+		
+		if(name.size() > 12){
+			std::transform(name.begin(), name.end(),name.begin(), ::toupper);
+			name = truncate(name, 22);
+			_vfd->setCursor(0,8);
+			_vfd->setFont(VFD::FONT_MINI);
+		}
+		else{
+			_vfd->setCursor(0,10);
+			_vfd->setFont(VFD::FONT_5x7);
+		}
+		
+		_vfd->printPacket("%s", name.c_str());
+		
+		uint8_t col = 0;
+		uint8_t topRow = 22;
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,topRow);
+		_vfd->printPacket("LAT/LONG");
+		
+		_vfd->setCursor(midX +20, topRow);
+		_vfd->printPacket("BEARING");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		
+		GPSLocation_t here;
+		GPSVelocity_t velocity;
+		if(gps->GetLocation(here) & here.isValid){
+			auto r = GPSmgr::dist_bearing(here,wp.location);
+			
+			_vfd->setCursor(col+10, topRow+10 );
+			
+			_vfd->printPacket("%-9s",  distanceString(r.first * 0.6213711922).c_str());
+			//		_vfd->printPacket("%6.2fmi", r.first * 0.6213711922);
+			
+			int bearing = int(r.second);
+			
+			string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
+			string dir = ordinal[int(floor((bearing / 45) + 0.5)) % 8]  ;
+			
+			_vfd->setCursor(midX +25 ,topRow+10);
+			_vfd->printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
+			
+			int heading = INT_MAX;
+			
+			if(gps->GetVelocity(velocity) && velocity.isValid){
+				//save heading
+				last_heading  = int(velocity.heading);
+				heading =  int( r.second - velocity.heading );
+				
+				//				printf("r: %5.1f vel: %5.1f = %d\n", r.second,  velocity.heading,  heading);
+				
+			}
+			else if( last_heading != INT_MAX){
+				heading =  int( r.second - last_heading );
+			}
+			
+			if( heading != INT_MAX){
+				_vfd->setCursor(col+10,topRow+22);
+				_vfd->printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
+			}
+		}
+		
+		string latlon = GPSmgr::latlonString(wp.location);
+		vector<string> v = split<string>(latlon, " ");
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,height -10);
+		_vfd->printPacket("LAT/LONG:");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0, height );
+		_vfd->printPacket(" %-18s", latlon.c_str());
+	}
+	
+	drawTimeBox();
+}
+
+
+// MARK: -  Scanner Channels
+
+
+void DisplayMgr::showChannel( RadioMgr::channel_t channel,
+									  showChannelCallBack_t cb) {
+	if(channel.first != RadioMgr::MODE_UNKNOWN){
+		_currentChannel = channel;
+		_showChannelCB = cb;
+		setEvent(EVT_PUSH, MODE_CHANNEL_INFO);
+	}
+}
+
+
+bool DisplayMgr::processSelectorKnobActionForChannelInfo( knob_action_t action){
+	bool wasHandled = false;
+	
+	
+	string uuid = "";
+	
+	auto savedCB = _showChannelCB;
+	auto savedChannel = _currentChannel;
+	
+	if(action == KNOB_CLICK ||  action == KNOB_DOUBLE_CLICK){
+		
+		popMode();
+		_showChannelCB = NULL;
+		_currentChannel = {RadioMgr::MODE_UNKNOWN, 0};
+		wasHandled = true;
+		
+		if(savedCB) {
+			savedCB(wasHandled, savedChannel, action);
+		}
+	}
+	
+	return wasHandled;
+}
+
+
+void DisplayMgr::drawChannelInfo(modeTransition_t transition){
+	
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	
+	//	uint8_t width = _vfd->width();
+	//	uint8_t height = _vfd->height();
+	
+	int centerY = _vfd->height() /2;
+	
+	if(transition == TRANS_LEAVING) {
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		return;
+	}
+	
+	
+	RadioMgr::radio_mode_t  mode = _currentChannel.first;
+	uint32_t						freq = _currentChannel.second;
+	
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		_vfd->clearScreen();
+		
+		_vfd->setCursor(0,7);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("CHANNEL INFO");
+		
+		_vfd->setFont(VFD::FONT_5x7);
+		
+		constexpr int maxLen = 20;
+		string spaces(maxLen, ' ');
+		
+		string titleStr = "";
+		PiCarMgr::station_info_t info;
+		if(mgr->getStationInfo(mode, freq, info)){
+			titleStr = truncate(info.title, maxLen);
+			string portionOfSpaces = spaces.substr(0, (maxLen - titleStr.size()) / 2);
+			titleStr = portionOfSpaces + titleStr;
+		}
+		
+		_vfd->setCursor(0,centerY-5);
+		_vfd->printPacket("%-21s",titleStr.c_str() );
+		
+		string channelStr = RadioMgr::modeString(mode) + " "
+		+ RadioMgr::hertz_to_string(freq, 3) + " "
+		+ RadioMgr::freqSuffixString(freq);
+		
+		string portionOfSpaces = spaces.substr(0, (maxLen - channelStr.size()) / 2);
+		channelStr = portionOfSpaces + channelStr;
+		_vfd->setCursor(0,centerY+5);
+		_vfd->printPacket("%-21s",channelStr.c_str() );
+		
+		_vfd->setCursor(0, 60);
+		_vfd->printPacket("           ");
+		
+		bool isPreset = mgr->isPresetChannel(mode, freq);
+		bool isScanner = mgr->isScannerChannel(mode, freq);
+		_vfd->setCursor(0, 60);
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->printPacket("%s %s", isPreset?"PRESET":"", isScanner?"SCANNER":"");
+	}
+	
+	drawTimeBox();
+	
+	
+}
+
+
+void DisplayMgr::showScannerChannels( RadioMgr::channel_t initialChannel,
+												 time_t timeout ,
+												 showScannerChannelsCallBack_t cb){
+	_lineOffset = 0;
+	
+	// set _lineOffset to proper entry
+	if (initialChannel.first  != RadioMgr::MODE_UNKNOWN){
+		PiCarMgr*		mgr 	= PiCarMgr::shared();
+		auto channels 	= mgr->getScannerChannels();
+		
+		for( int i = 0; i < channels.size(); i++){
+			if(channels[i].first == initialChannel.first
+				&& channels[i].second == initialChannel.second){
+				_lineOffset = i;
+				break;
+			}
+		}
+	}
+	
+	_scannnerChannelsCB = cb;
+	_menuTimeout = timeout;
+	setEvent(EVT_PUSH, MODE_SCANNER_CHANNELS);
+}
+
+
+bool DisplayMgr::processSelectorKnobActionForScannerChannels( knob_action_t action){
+	bool wasHandled = false;
+	
+	
+	switch(action){
+			
+		case KNOB_EXIT:
+			if(_scannnerChannelsCB) {
+				_scannnerChannelsCB(false, {RadioMgr::MODE_UNKNOWN, 0}, action);
+			}
+			setEvent(EVT_POP, MODE_UNKNOWN);
+			_scannnerChannelsCB = NULL;
+			_lineOffset = 0;
+			break;
+			
+		case KNOB_UP:
+			if(_lineOffset < 255){
+				_lineOffset++;
+				setEvent(EVT_NONE,MODE_SCANNER_CHANNELS);
+			}
+			wasHandled = true;
+			break;
+			
+		case KNOB_DOWN:
+			if(_lineOffset != 0) {
+				_lineOffset--;
+				setEvent(EVT_NONE,MODE_SCANNER_CHANNELS);
+			}
+			wasHandled = true;
+			break;
+			
+		case KNOB_CLICK:
+		case KNOB_DOUBLE_CLICK:
+		{
+			PiCarMgr*	mgr 	= PiCarMgr::shared();
+			auto channels = mgr->getScannerChannels();
+			bool success = false;
+			
+			RadioMgr::channel_t channel = {RadioMgr::MODE_UNKNOWN, 0};
+			
+			auto savedCB = _scannnerChannelsCB;
+			
+			if(_lineOffset < channels.size()) {
+				channel = channels[_lineOffset];
+				success = true;
+			};
+			
+			popMode();
+			_wayPointCB = NULL;
+			_lineOffset = 0;
+			
+			if(savedCB) {
+				savedCB(success, channel, action);
+			}
+			
+			if(!success)
+				setEvent(EVT_REDRAW, _current_mode);
+			
+			wasHandled = true;
+			
+		}
+			break;
+			
+		default: break;
+			
+	}
+	
+	if(action ==  KNOB_UP || action == KNOB_DOWN){
+		PiCarMgr*	mgr 	= PiCarMgr::shared();
+		auto channels = mgr->getScannerChannels();
+		
+		if(_lineOffset < channels.size()) {
+			RadioMgr::channel_t channel = channels[_lineOffset];
+			if(_scannnerChannelsCB) (_scannnerChannelsCB)(true, channel, KNOB_SELECTING);
+		}
+		
+	}
+	
+	return wasHandled;
+}
+
+
+void DisplayMgr::drawScannerChannels(modeTransition_t transition){
+	
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	
+	constexpr int displayedLines = 5;
+	
+	static int lastOffset = 0;
+	static int firstLine = 0;
+	
+	bool needsRedraw = false;
+	
+	if(transition == TRANS_LEAVING) {
+		
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		lastOffset = 0;
+		firstLine = 0;
+		return;
+	}
+	
+	auto channels = mgr->getScannerChannels();
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		
+		_vfd->clearScreen();
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0,10);
+		_vfd->write("Scanner");
+		
+		// safety check
+		if(_lineOffset >=  channels.size())
+			_lineOffset = 0;
+		
+		lastOffset = INT_MAX;
+		firstLine = 0;
+		needsRedraw = true;
+		
+	}
+	
+	// check for change in gps offsets ?
+	// if anything changed, needsRedraw = true
+	
+	if( lastOffset != _lineOffset){
+		lastOffset = _lineOffset;
+		needsRedraw = true;
+	}
+	
+	if(needsRedraw){
+		needsRedraw = false;
+		
+		vector<string> lines = {};
+		size_t totalLines = channels.size() + 1;  // add kEXIT
+		
+		if(_lineOffset > totalLines -1)
+			_lineOffset = totalLines -1;
+		
+		// framer code
+		if( (_lineOffset - displayedLines + 1) > firstLine) {
+			firstLine = _lineOffset - displayedLines + 1;
+		}
+		else if(_lineOffset < firstLine) {
+			firstLine = max(firstLine - 1,  0);
+		}
+		
+		// create lines
+		for(auto i = 0 ; i < totalLines; i++){
+			
+			string line = "";
+			bool isSelected = i == _lineOffset;
+			
+			if(i < channels.size()) {
+				RadioMgr::radio_mode_t  mode = channels[i].first;
+				uint32_t freq = channels[i].second;
+				
+				string channelStr = RadioMgr::hertz_to_string(freq, 3);
+				
+				PiCarMgr::station_info_t info;
+				if(mgr->getStationInfo(mode, freq, info)){
+					string title = truncate(info.title,  20);
+					channelStr += + " " + title ;
+				}
+				
+				std::transform(channelStr.begin(), channelStr.end(),channelStr.begin(), ::toupper);
+				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") +  channelStr;
+			}
+			else {
+				line = string("\x1d") + (isSelected?"\xb9":" ") + string("\x1c ") + " EXIT   " ;
+			}
+			
+			lines.push_back(line);
+		}
+		
+		_vfd->printLines(20, 9, lines, firstLine, displayedLines, VFD::FONT_MINI);
+		
+		if(lines.size() > displayedLines){
+			
+			float bar_height =  (float)(displayedLines +1)/ (float)lines.size() ;
+			float offset =  (float)_lineOffset / ((float)lines.size() -1) ;
+			
+			_vfd->drawScrollBar(11, bar_height ,offset);
+		}
+		
+	}
+	
+	drawTimeBox();
+}
+
+
+
 // MARK: -  Display value formatting
 
 bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
@@ -3795,7 +4920,7 @@ bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
 			case	FrameDB::KPH:
 			{
 				float mph = stof(rawValue) *  0.6213712;
-				sprintf(p, "%d mph",  (int) round(mph));
+				sprintf(p, "%2d mph",  (int) round(mph));
 				value = string(buffer);
 			}
 				
@@ -4167,9 +5292,110 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	printf("cleanup GPSReader\n");
 }
 
-void DisplayMgr::drawTimeBox(){
+void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 	
-	_vfd->setFont(VFD::FONT_MINI);
-	_vfd->setCursor(0, 60);
-	_vfd->write("TIME");
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	GPSmgr*			gps 	= mgr->gps();
+	
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
+	
+	uint8_t midX = width/2;
+	static int	last_heading = INT_MAX;
+	
+	if(transition == TRANS_LEAVING) {
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		return;
+	}
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		_vfd->clearScreen();
+		last_heading = INT_MAX;
+	}
+	
+	// find waypoint with uuid
+	auto wps = mgr->getWaypoints();
+	
+	if(_lineOffset < wps.size()){
+		auto wp = wps[_lineOffset];
+		string name = wp.name;
+		
+		if(name.size() > 12){
+			std::transform(name.begin(), name.end(),name.begin(), ::toupper);
+			name = truncate(name, 22);
+			_vfd->setCursor(0,8);
+			_vfd->setFont(VFD::FONT_MINI);
+		}
+		else{
+			_vfd->setCursor(0,10);
+			_vfd->setFont(VFD::FONT_5x7);
+		}
+		
+		_vfd->printPacket("%s", name.c_str());
+		
+		uint8_t col = 0;
+		uint8_t topRow = 22;
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,topRow);
+		_vfd->printPacket("LAT/LONG");
+		
+		_vfd->setCursor(midX +20, topRow);
+		_vfd->printPacket("BEARING");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		
+		GPSLocation_t here;
+		GPSVelocity_t velocity;
+		if(gps->GetLocation(here) & here.isValid){
+			auto r = GPSmgr::dist_bearing(here,wp.location);
+			
+			_vfd->setCursor(col+10, topRow+10 );
+			
+			_vfd->printPacket("%-9s",  distanceString(r.first * 0.6213711922).c_str());
+			//		_vfd->printPacket("%6.2fmi", r.first * 0.6213711922);
+			
+			int bearing = int(r.second);
+			
+			string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
+			string dir = ordinal[int(floor((bearing / 45) + 0.5)) % 8]  ;
+			
+			_vfd->setCursor(midX +25 ,topRow+10);
+			_vfd->printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
+			
+			int heading = INT_MAX;
+			
+			if(gps->GetVelocity(velocity) && velocity.isValid){
+				//save heading
+				last_heading  = int(velocity.heading);
+				heading =  int( r.second - velocity.heading );
+				
+				//				printf("r: %5.1f vel: %5.1f = %d\n", r.second,  velocity.heading,  heading);
+				
+			}
+			else if( last_heading != INT_MAX){
+				heading =  int( r.second - last_heading );
+			}
+			
+			if( heading != INT_MAX){
+				_vfd->setCursor(col+10,topRow+22);
+				_vfd->printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
+			}
+		}
+		
+		string latlon = GPSmgr::latlonString(wp.location);
+		vector<string> v = split<string>(latlon, " ");
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,height -10);
+		_vfd->printPacket("LAT/LONG:");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0, height );
+		_vfd->printPacket(" %-18s", latlon.c_str());
+	}
+	
+	drawTimeBox();
 }
