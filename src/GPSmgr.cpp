@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <errno.h> // Error integer and strerror() function
 #include "ErrorMgr.hpp"
-#include "utm.hpp"
 #include <cmath>
 #include "timespec_util.h"
 
@@ -301,42 +300,6 @@ bool GPSmgr::GetTime(struct timespec& gpsTime ){
  
 // MARK: -  Utilities
  
-
-string GPSmgr::UTMString(GPSLocation_t location){
-	string str = string();
-	
-	if(location.isValid){
-		long  Zone;
-		char 	latBand;
-		char  Hemisphere;
-		double Easting;
-		double Northing;
-	
-		double latRad = (PI/180.) * location.latitude;
-		double lonRad = (PI/180.) * location.longitude;
-	
-		if( Convert_Geodetic_To_UTM(latRad, lonRad,
-											 &Zone,&latBand, &Hemisphere, &Easting, &Northing ) == UTM_NO_ERROR){
-			
-			char utmBuffer[32] = {0};
-			sprintf(utmBuffer,  "%d%c %ld %ld", (int)Zone, latBand, (long) Easting, (long) Northing);
-			str = string(utmBuffer);
-		}
-	}
-	
-	return str;
-	
-}
- 
-
-string GPSmgr::headingStringFromHeading(double	 heading){
- 
-	string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
-	string str = ordinal[int(floor((int(heading) / 45) + 0.5)) % 8]  ;
-	return str;
-}
-
-
 /*
  * Great-circle distance computational forumlas
  *
@@ -448,143 +411,6 @@ void GPSmgr::processUBX(u_int8_t ubx_class, u_int8_t ubx_id,
 	
 	struct timespec utc;
 	clock_gettime(CLOCK_REALTIME, &utc );
-
-	if( ubx_class == 0x01) {
- 
-		switch (ubx_id) {
-				
-			case 0x07:		 //	UBX-NAV-PVT (0x01 0x07)
-				if(length == 92) {
-// 					printf(" process UBX-NAV-PVT (0x01 0x07)\n");
-
-					bool gotTime = false;
-		//				uint32_t iTOW  	= TO_U32(buffer, 0);
-					uint16_t year 		= TO_U16(buffer,4);
-					uint8_t month 		= TO_U8(buffer,6);
-					uint8_t day 		= TO_U8(buffer,7);
-					uint8_t hours 		= TO_U8(buffer,8);
-					uint8_t minutes 	= TO_U8(buffer,9);
-					uint8_t seconds 	= TO_U8(buffer,10);
-					uint8_t timeFlags = TO_U8(buffer,11);
-					uint8_t flags 		= TO_U8(buffer,21);
-		
-					uint8_t numSV 		= TO_U8(buffer,23);  // Number of satellites used in Nav Solution
-					
-					long lon 			= TO_I32(buffer,24);
-					long lat				= TO_I32(buffer,28);
-					long hMSL 			= TO_I32(buffer,36);
-					uint8_t fixType 	= TO_U8(buffer,20);
-					uint8_t pDOP 		= TO_U8(buffer,76);
-					
-					long gSpeed 		= TO_I32(buffer,60);  // Ground Speed (2-D)
-					long headMot 		= TO_I32(buffer,64); //Heading of motion (2-D)
-	//				uint32_t sAcc 		= TO_I32(buffer,68); //Speed accuracy estimate
-	//				uint32_t headAcc 	= TO_I32(buffer,72); //Heading accuracy estimate (both motion and vehicle)
-	//				long headVehic 	= TO_I32(buffer,84); //Heading of vehicle (2-D),
-				
-					
-	//				printf("  knots: %f head: %f  \n",   gSpeed  * 0.0019438444924406 , headMot * 1e-5);
-	//
-	//				printf(" sAcc: %d headAcc: %f speed: %ld head: %f \n", sAcc, headAcc * 1e-5 , gSpeed, headMot * 1e-5);
-//
-					pthread_mutex_lock (&_mutex);
-					
-					if((timeFlags & 0x7) == 0x7) {
-						struct tm tm;
-						memset(&tm, 0, sizeof(tm));
-						
-						if (year < 80) {
-							tm.tm_year = 2000 + year - 1900; // 2000-2079
-						} else if (year >= 1900) {
-							tm.tm_year = year - 1900;        // 4 digit year, use directly
-						} else {
-							tm.tm_year = year;               // 1980-1999
-						}
-						
-						tm.tm_mon = month - 1;
-						tm.tm_mday = day;
-						tm.tm_hour = hours;
-						tm.tm_min = minutes;
-						tm.tm_sec = seconds;
-						time_t timestamp = timegm(&tm);
-						if (timestamp != (time_t)-1) {
-							struct timespec gpsTime;
-							gpsTime.tv_sec = timestamp;
-							gpsTime.tv_nsec =0;
-							_lastGPSTime.gpsTime = gpsTime;
-							_lastGPSTime.timestamp = now;
-							_lastGPSTime.isValid 	= 	true;
-							gotTime = true;
-						}
-					}
-					
-					if(flags & 0x01) {   // gnssFixOK
-						if(fixType >= 2){  // 2D-fix
-							_lastLocation.latitude = lat * 1e-7;
-							_lastLocation.longitude =  lon * 1e-7;
-							_lastLocation.isValid = true;
-						}
-						
-						if(fixType >= 3){ // 3D-fix
-							_lastLocation.altitude = hMSL  * 1e-3;
-							_lastLocation.altitudeIsValid = true;
-						}
-					}
-					
-					_lastLocation.DOP = pDOP * 0.01;
-					_lastLocation.numSat = numSV;
-					_lastLocation.timestamp = now;
-					 
-					// do we assume that velocity is valid when there is any fix?
-					if((flags & 0x01) &&  (fixType >= 2)){
-						_lastVelocity.heading 	= headMot * 1e-5;
-						_lastVelocity.speed 		= gSpeed * 0.0019438444924406;		// convert mm/s to  knots
-						_lastVelocity.isValid 	= 	true;
-						_lastVelocity.timestamp = now;
-					}
-	 
-					pthread_mutex_unlock (&_mutex);
-					
-					if(gotTime){
-						// check against clock */
-						
-						time_t diffSecs = abs( _lastGPSTime.gpsTime.tv_sec - utc.tv_sec);
-						pthread_mutex_unlock (&_mutex);
-						
-						// detect clock difference
-						if(diffSecs  > 1){
-							if(_timeSyncCB)
-								(_timeSyncCB)(diffSecs,_lastGPSTime.gpsTime );
-						}
-					}
-				}
-				
-				break;
-				
-			default:
-				
-#if DEBUG_UBX
-				printf("UBX: (%02x,%02x) %zu \n", ubx_class, ubx_id, length);
-				dumpHex(buffer, length, 0); printf("\n");
-#endif
-				break;
-		}
-	}
-	
-	
-}
-
- 
-// MARK: -  NMEA decode
- 
-// call then when _nmea.process  is true
-void GPSmgr:: processNMEA(u_int8_t *buffer, size_t length)  {
-	
-	struct timespec now;
-	clock_gettime(CLOCK_MONOTONIC, &now );
-	
-	struct timespec utc;
-	clock_gettime(CLOCK_REALTIME, &utc );
  
 	const char*  sentence =  (const char* )(buffer);
 	
@@ -597,7 +423,7 @@ void GPSmgr:: processNMEA(u_int8_t *buffer, size_t length)  {
 				
 				if(frame.valid){
 					
-//					printf(" process MINMEA_SENTENCE_RMC\n");
+//					printf(" process UBX-NAV-PVT (0x01 0x07)\n");
 
 					pthread_mutex_lock (&_mutex);
 					memset((void*)&_lastVelocity, 0, sizeof(_lastVelocity));
