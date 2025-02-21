@@ -16,6 +16,7 @@
 #include <bitset>
 #include <strings.h>
 #include <cstring>
+#include <string_view>
 
 #include "CanProtocol.hpp"
 
@@ -40,22 +41,22 @@ public:
 	FrameDB();
 	~FrameDB();
 	
-	bool registerProtocol(string ifName,  CanProtocol *protocol = NULL);
-	void unRegisterProtocol(string ifName, CanProtocol *protocol);
+	bool registerProtocol(string_view ifName,  CanProtocol *protocol = NULL);
+	void unRegisterProtocol(string_view ifName, CanProtocol *protocol);
 	vector<CanProtocol*>	protocolsForTag(frameTag_t tag);
-	vector<string> pollableInterfaces();
+	vector<string_view> pollableInterfaces();
 	 
 
 	eTag_t lastEtag() { return  _lastEtag;};
  
 // Frame database
-	void saveFrame(string ifName, can_frame_t frame, unsigned long timeStamp);
-	void clearFrames(string ifName = "");
+	void saveFrame(string_view ifName, can_frame_t frame, unsigned long timeStamp);
+	void clearFrames(string_view ifName = "");
 	
-	vector<frameTag_t> 	allFrames(string ifName);
-	vector<frameTag_t>  	framesUpdateSinceEtag(string ifName, eTag_t eTag, eTag_t *newEtag);
-	vector<frameTag_t>  	framesOlderthan(string ifName, time_t time);
-	bool 						frameWithTag(frameTag_t tag, frame_entry *frame, string *ifNameOut = NULL);
+	vector<frameTag_t> 	allFrames(string_view ifName);
+	vector<frameTag_t>  	framesUpdateSinceEtag(string_view ifName, eTag_t eTag, eTag_t *newEtag);
+	vector<frameTag_t>  	framesOlderthan(string_view ifName, time_t time);
+	bool 						frameWithTag(frameTag_t tag, frame_entry *frame, string_view *ifNameOut = NULL);
 	int						framesCount();
 
 // value Database
@@ -97,34 +98,34 @@ public:
 	}valueSchemaUnits_t;
 
 	typedef struct {
-		string             title;
-		string             description;
+		string_view             title;
+		string_view             description;
 		valueSchemaUnits_t  	units;
 	} valueSchema_t;
 
 
-	void addSchema(string key,  valueSchema_t schema, vector<uint8_t>obd_request = {});
-	valueSchema_t schemaForKey(string key);
+	void addSchema(string_view key,  valueSchema_t schema, vector<uint8_t>obd_request = {});
+	valueSchema_t schemaForKey(string_view key);
 	
-	bool obd_request(string key, vector <uint8_t> & request);
+	bool obd_request(string_view key, vector <uint8_t> & request);
 	
-	void updateValue(string key, string value, time_t when);
-	void clearValue(string key);
+	void updateValue(string_view key, string_view value, time_t when);
+	void clearValue(string_view key);
 
 	void clearValues();
 	int valuesCount();
 
-	vector<string> 		allValueKeys();
-	vector<string>  	valuesUpdateSinceEtag(eTag_t eTag, eTag_t *newEtag);
-	vector<string>  	valuesOlderthan(time_t time);
-	bool 							valueWithKey(string key, string *value);
-	bool							boolForKey(string key, bool &state);
-	bool							bitsForKey(string key, bitset<8> &bits);
+	vector<string_view> 		allValueKeys();
+	vector<string_view>  	valuesUpdateSinceEtag(eTag_t eTag, eTag_t *newEtag);
+	vector<string_view>  	valuesOlderthan(time_t time);
+	bool 							valueWithKey(string_view key, string *value);
+	bool							boolForKey(string_view key, bool &state);
+	bool							bitsForKey(string_view key, bitset<8> &bits);
 
-	valueSchemaUnits_t 		unitsForKey(string key);
-	string 						unitSuffixForKey(string key);
-	double 						normalizedDoubleForValue(string key, string value);
-	int 							intForValue(string key, string value);
+	valueSchemaUnits_t 		unitsForKey(string_view key);
+	string 						unitSuffixForKey(string_view key);
+	double 						normalizedDoubleForValue(string_view key, string_view value);
+	int 							intForValue(string_view key, string_view value);
 	
  protected:
  
@@ -137,14 +138,14 @@ private:
 	ifTag_t _lastInterfaceTag;
  
 	typedef struct {
-		string							ifName;
+		string_view							ifName;
 		ifTag_t							ifTag;		// we combine ifTag and frameiD to create a refnum
 		vector<CanProtocol*>   		protocols;
 		map<canid_t,frame_entry> 	frames;
 	} interfaceInfo_t;
 
 // frames and interfaces
-	map<string, interfaceInfo_t> _interfaces;
+	map<string_view, interfaceInfo_t> _interfaces;
 	
 	// value database
 	
@@ -154,7 +155,7 @@ private:
 		string			value;
 		} value_t;
 
-	map<string, valueSchema_t>			_schema;
-	map<string, vector <uint8_t>>		_obd_request;
-	map<string, value_t> _values;
+	map<string_view, valueSchema_t>			_schema;
+	map<string_view, vector <uint8_t>>		_obd_request;
+	map<string_view, value_t> _values;
   };

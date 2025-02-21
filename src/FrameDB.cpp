@@ -34,7 +34,7 @@ FrameDB::~FrameDB(){
 }
  
 
-bool FrameDB::registerProtocol(string ifName, CanProtocol *protocol) {
+bool FrameDB::registerProtocol(string_view ifName, CanProtocol *protocol) {
 
 	// create the interface if it doesnt already exist?
 	if(_interfaces.count(ifName) == 0){
@@ -60,7 +60,7 @@ bool FrameDB::registerProtocol(string ifName, CanProtocol *protocol) {
 	return true;
 }
 
-void FrameDB::unRegisterProtocol(string ifName, CanProtocol *protocol){
+void FrameDB::unRegisterProtocol(string_view ifName, CanProtocol *protocol){
 	
 	// erase all interfaces?
 	if(_interfaces.count(ifName)){
@@ -92,9 +92,9 @@ void FrameDB::unRegisterProtocol(string ifName, CanProtocol *protocol){
 }
  
 
-vector<string> FrameDB::pollableInterfaces(){
+vector<string_view> FrameDB::pollableInterfaces(){
 
-	vector<string> ifNames;
+	vector<string_view> ifNames;
 	
 	for (const auto& [name ,_ ] : _interfaces){
 		auto info = &_interfaces[name];
@@ -149,7 +149,7 @@ void FrameDB::addSchema(string_view key,  valueSchema_t schema, vector<uint8_t>o
 }
  
 
-bool FrameDB::obd_request(string key, vector <uint8_t> & request){
+bool FrameDB::obd_request(string_view key, vector <uint8_t> & request){
 	bool success = false;
 	if(_obd_request.count(key)){
 		auto foundReq = _obd_request[key];
@@ -183,7 +183,7 @@ int FrameDB::framesCount(){
 }
 
 
-void FrameDB::clearFrames(string ifName){
+void FrameDB::clearFrames(string_view ifName){
 	
 	for (auto& [key, entry]  : _interfaces)
 		for(auto proto : entry.protocols){
@@ -199,7 +199,7 @@ void FrameDB::clearFrames(string ifName){
 		clearValues();
 	}
 	else for (auto& [key, entry]  : _interfaces){
-		if (strcasecmp(key.c_str(), ifName.c_str()) == 0){
+		if (strcasecmp(key.c_str(), ifName.data()) == 0){
 			entry.frames.clear();
 			return;
 		}
@@ -209,7 +209,7 @@ void FrameDB::clearFrames(string ifName){
 }
 
  
-void  FrameDB::saveFrame(string ifName, can_frame_t frame, unsigned long  timeStamp){
+void  FrameDB::saveFrame(string_view ifName, can_frame_t frame, unsigned long  timeStamp){
 	
 	std::lock_guard<std::mutex> lock(_mutex);
 
@@ -306,7 +306,7 @@ void  FrameDB::saveFrame(string ifName, can_frame_t frame, unsigned long  timeSt
 }
 
 
-vector<frameTag_t> FrameDB::framesUpdateSinceEtag(string ifName, eTag_t eTag, eTag_t *eTagOut ){
+vector<frameTag_t> FrameDB::framesUpdateSinceEtag(string_view ifName, eTag_t eTag, eTag_t *eTagOut ){
 	
 	std::lock_guard<std::mutex> lock(_mutex);
 	vector<frameTag_t> tags = {};
@@ -331,7 +331,7 @@ vector<frameTag_t> FrameDB::framesUpdateSinceEtag(string ifName, eTag_t eTag, eT
 }
 
 
-vector<frameTag_t> 	FrameDB::allFrames(string ifName){
+vector<frameTag_t> 	FrameDB::allFrames(string_view ifName){
 	vector<frameTag_t> tags = {};
 	
 	std::lock_guard<std::mutex> lock(_mutex);
@@ -350,7 +350,7 @@ vector<frameTag_t> 	FrameDB::allFrames(string ifName){
 
 }
 
-vector<frameTag_t>  	FrameDB::framesOlderthan(string ifName, time_t time){
+vector<frameTag_t>  	FrameDB::framesOlderthan(string_view ifName, time_t time){
 	vector<frameTag_t> tags = {};
 	
 	std::lock_guard<std::mutex> lock(_mutex);
@@ -371,7 +371,7 @@ vector<frameTag_t>  	FrameDB::framesOlderthan(string ifName, time_t time){
 	return tags;
 }
 
-bool FrameDB::frameWithTag(frameTag_t tag, frame_entry *frameOut, string *ifNameOut){
+bool FrameDB::frameWithTag(frameTag_t tag, frame_entry *frameOut, string_view *ifNameOut){
 	
 	std::lock_guard<std::mutex> lock(_mutex);
 	
@@ -420,7 +420,7 @@ void FrameDB::clearValue(string_view key){
 	_values.erase(key);
 }
 
-void FrameDB::updateValue(string_view key, string value, time_t when){
+void FrameDB::updateValue(string_view key, string_view value, time_t when){
  
 	if(when == 0)
 		when = time(NULL);
@@ -442,7 +442,7 @@ void FrameDB::updateValue(string_view key, string value, time_t when){
 	
 	// DEBUG
 	if(shouldUpdate)
-		printf("\t %20s : %s \n", string(key).c_str(), value.c_str());
+		printf("\t %20s : %s \n", string(key).c_str(), value.data());
 }
 
 
@@ -505,12 +505,12 @@ bool FrameDB::valueWithKey(string_view key, string *valueOut){
 };
 
 
-FrameDB::valueSchemaUnits_t FrameDB::unitsForKey(string key){
+FrameDB::valueSchemaUnits_t FrameDB::unitsForKey(string_view key){
 	valueSchema_t schema = schemaForKey(key);
 	return schema.units;
 }
 
-string   FrameDB::unitSuffixForKey(string key){
+string   FrameDB::unitSuffixForKey(string_view key){
 	string suffix = {};
 	
 	switch(unitsForKey(key)){
@@ -548,13 +548,13 @@ string   FrameDB::unitSuffixForKey(string key){
 	return suffix;
 }
 
-double FrameDB::normalizedDoubleForValue(string key, string value){
+double FrameDB::normalizedDoubleForValue(string_view key, string_view value){
 	
 	double retVal = 0;
 	
 	// see if it's a number
 	char   *p;
-	double val = strtod(value.c_str(), &p);
+	double val = strtod(value.data(), &p);
 	if(*p == 0) {
  
 		// normalize number
@@ -589,7 +589,7 @@ double FrameDB::normalizedDoubleForValue(string key, string value){
 	return retVal;
 }
 
- int FrameDB::intForValue(string key, string value){
+ int FrameDB::intForValue(string_view key, string_view value){
 	
 	int retVal = 0;
 	
@@ -601,7 +601,7 @@ double FrameDB::normalizedDoubleForValue(string key, string value){
 		 {
 			 int intval = 0;
 
-			 if(sscanf(value.c_str(), "%d", &intval) == 1){
+			 if(sscanf(value.data(), "%d", &intval) == 1){
 				retVal = intval;
 			}
 		 }
@@ -615,7 +615,7 @@ double FrameDB::normalizedDoubleForValue(string key, string value){
 	return retVal;
 }
 
-bool	 FrameDB::boolForKey(string key, bool &state){
+bool	 FrameDB::boolForKey(string_view key, bool &state){
 	
 	bool valid = false;
 
@@ -655,7 +655,7 @@ bool	 FrameDB::boolForKey(string key, bool &state){
 };
 
 
-bool	  FrameDB::bitsForKey(string key, bitset<8> &bitsout){
+bool	  FrameDB::bitsForKey(string_view key, bitset<8> &bitsout){
 	bool valid = false;
 	
 	try {
