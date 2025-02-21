@@ -355,7 +355,7 @@ void GPSmgr::processNMEA(u_int8_t *buffer, size_t length) {
     memcpy(sentence, buffer, length);
     sentence[length] = '\0';
 
-    minmea_sentence_id id = minmea_sentence_id(sentence);
+    enum minmea_sentence_id id = minmea_sentence_id(sentence, false);
 
     switch (id) {
         case MINMEA_SENTENCE_RMC: {
@@ -364,17 +364,25 @@ void GPSmgr::processNMEA(u_int8_t *buffer, size_t length) {
                 if (frame.valid) {
                     _lastLocation.latitude = minmea_tocoord(&frame.latitude);
                     _lastLocation.longitude = minmea_tocoord(&frame.longitude);
-                    _lastVelocity.speed = frame.speed.value;
-                    _lastVelocity.course = frame.course.value;
+                    _lastLocation.isValid = true;
                     
-                    // Update GPS time
-                    _lastGPSTime.year = frame.date.year + 2000;  // Convert 2-digit year to 4-digit
-                    _lastGPSTime.month = frame.date.month;
-                    _lastGPSTime.day = frame.date.day;
-                    _lastGPSTime.hour = frame.time.hours;
-                    _lastGPSTime.minute = frame.time.minutes;
-                    _lastGPSTime.second = frame.time.seconds;
-                    _lastGPSTime.valid = true;
+                    _lastVelocity.speed = frame.speed.value;
+                    _lastVelocity.heading = frame.course.value;
+                    _lastVelocity.isValid = true;
+                    
+                    // Update GPS time using timespec
+                    struct tm tm = {0};
+                    tm.tm_year = frame.date.year + 100;  // minmea gives years since 1900
+                    tm.tm_mon = frame.date.month - 1;    // tm months are 0-11
+                    tm.tm_mday = frame.date.day;
+                    tm.tm_hour = frame.time.hours;
+                    tm.tm_min = frame.time.minutes;
+                    tm.tm_sec = frame.time.seconds;
+                    
+                    _lastGPSTime.gpsTime.tv_sec = mktime(&tm);
+                    _lastGPSTime.gpsTime.tv_nsec = 0;
+                    clock_gettime(CLOCK_MONOTONIC, &_lastGPSTime.timestamp);
+                    _lastGPSTime.isValid = true;
                 }
             }
             break;
@@ -383,7 +391,10 @@ void GPSmgr::processNMEA(u_int8_t *buffer, size_t length) {
             struct minmea_sentence_gga frame;
             if (minmea_parse_gga(&frame, sentence)) {
                 _lastLocation.altitude = minmea_tofloat(&frame.altitude);
-                _lastLocation.valid = true;
+                _lastLocation.altitudeIsValid = true;
+                _lastLocation.numSat = frame.satellites_tracked;
+                _lastLocation.DOP = frame.hdop.value * 10;  // Convert to tenths
+                clock_gettime(CLOCK_MONOTONIC, &_lastLocation.timestamp);
             }
             break;
         }
