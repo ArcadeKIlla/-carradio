@@ -2705,7 +2705,7 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 		// draw titles
 		_vfd->setFont(VFD::FONT_MINI);
 		_vfd->setCursor(2,utmRow);
-		_vfd->printPacket("UTM");
+		_vfd->printPacket("COORDINATES");
 		
 		_vfd->setCursor(2,altRow);
 		_vfd->printPacket("ALTITUDE");
@@ -2725,19 +2725,12 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 	
 	GPSLocation_t location;
 	if(gps->GetLocation(location)){
-		string utm = GPSmgr::UTMString(location);
-		vector<string> v = split<string>(utm, " ");
+		char coordStr[32];
+		snprintf(coordStr, sizeof(coordStr), "%.6f, %.6f", location.latitude, location.longitude);
 		
 		_vfd->setFont(VFD::FONT_5x7);
-		
-		_vfd->setCursor(col+7, utmRow+10 );
-		_vfd->printPacket("%-3s", v[0].c_str());
-		
-		_vfd->setCursor(col+30, utmRow+10 );
-		_vfd->printPacket("%-8s", v[1].c_str());
-		
-		_vfd->setCursor(col+30 - 6, utmRow+20 );
-		_vfd->printPacket("%-8s", v[2].c_str());
+		_vfd->setCursor(col+7, utmRow+10);
+		_vfd->printPacket("%s", coordStr);
 		
 		if(location.altitudeIsValid)  {
 			_vfd->setCursor(col+30, altRow+10);
@@ -4542,7 +4535,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 		
 		_vfd->setFont(VFD::FONT_MINI);
 		_vfd->setCursor(2,height -10);
-		_vfd->printPacket("UTM:");
+		_vfd->printPacket("LAT/LONG:");
 		
 		_vfd->setFont(VFD::FONT_5x7) ;
 		_vfd->setCursor(0, height );
@@ -4925,7 +4918,6 @@ bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
 				sprintf(p, "%2.1f",  miles);
 				value = string(buffer);
 			}
-				break;
 				
 			case	FrameDB::KPH:
 			{
@@ -5300,4 +5292,214 @@ void DisplayMgr::MetaDataReaderThreadCleanup(void *context){
 	//GPSmgr* d = (GPSmgr*)context;
 	
 	printf("cleanup GPSReader\n");
+}
+```
+```cpp
+void DisplayMgr::drawGPSScreen(modeTransition_t transition){
+	
+	uint8_t col = 0;
+	uint8_t row = 7;
+	string str;
+	
+	uint8_t width = _vfd->width();
+	uint8_t midX = width/2;
+	
+	uint8_t utmRow = row;
+	uint8_t altRow = utmRow+30;
+	
+	GPSmgr*	gps 	= PiCarMgr::shared()->gps();
+	
+	if(transition == TRANS_ENTERING) {
+		_vfd->clearScreen();
+		
+		// draw titles
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,utmRow);
+		_vfd->printPacket("COORDINATES");
+		
+		_vfd->setCursor(2,altRow);
+		_vfd->printPacket("ALTITUDE");
+		
+		_vfd->setCursor(midX +20 ,utmRow+10);
+		_vfd->printPacket("HEADING");
+		
+		_vfd->setCursor(midX +20 ,altRow);
+		_vfd->printPacket("SPEED");
+		
+	}
+	
+	if(transition == TRANS_LEAVING) {
+		return;
+	}
+	
+	
+	GPSLocation_t location;
+	if(gps->GetLocation(location)){
+		char coordStr[32];
+		snprintf(coordStr, sizeof(coordStr), "%.6f, %.6f", location.latitude, location.longitude);
+		
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->setCursor(col+7, utmRow+10);
+		_vfd->printPacket("%s", coordStr);
+		
+		if(location.altitudeIsValid)  {
+			_vfd->setCursor(col+30, altRow+10);
+			constexpr double  M2FT = 	3.2808399;
+			_vfd->printPacket("%-5.1f",location.altitude * M2FT);
+		}
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(0,60)	;
+		_vfd->printPacket( "SATS: %2d ",  location.numSat);
+		
+		_vfd->setCursor(midX +20,60)	;
+		_vfd->printPacket( "DOP: %-2.1f ",  location.DOP/10.);
+		
+	}
+	
+	static int	last_heading = INT_MAX;
+	_vfd->setFont(VFD::FONT_5x7);
+	
+	GPSVelocity_t velocity;
+	if(gps->GetVelocity(velocity)){
+		char buffer[8];
+		
+		//		printf("3  %f mph %f deg\n",  velocity.speed * 1.150779 , velocity.heading);
+		
+		//save heading
+		last_heading  = int(velocity.heading);
+		
+		memset(buffer, ' ', sizeof(buffer));
+		double mph = velocity.speed * 1.15078;  // knots to mph
+		sprintf( buffer , "%3d mph", (int)floor(mph));
+		_vfd->setCursor(midX +20 ,altRow+10);
+		_vfd->printPacket("%-8s ", buffer);
+	}
+	
+	
+	if( last_heading != INT_MAX){
+		char buffer[12];
+		
+		string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
+		string dir = ordinal[int(floor((last_heading / 45) + 0.5)) % 8]  ;
+		
+		memset(buffer, ' ', sizeof(buffer));
+		sprintf( buffer , "%3d\xa0\x1c%2s\x1d ",last_heading, dir.c_str());
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", buffer);
+	}
+	else {
+		_vfd->setCursor(midX +20 ,utmRow+20);
+		_vfd->printPacket("%-8s ", "---");
+	}
+	
+	drawTimeBox();
+}
+
+void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
+	
+	PiCarMgr*		mgr 	= PiCarMgr::shared();
+	GPSmgr*			gps 	= mgr->gps();
+	
+	uint8_t width = _vfd->width();
+	uint8_t height = _vfd->height();
+	
+	uint8_t midX = width/2;
+	static int	last_heading = INT_MAX;
+	
+	if(transition == TRANS_LEAVING) {
+		_rightKnob.setAntiBounce(antiBounceDefault);
+		_vfd->clearScreen();
+		return;
+	}
+	
+	if(transition == TRANS_ENTERING){
+		_rightKnob.setAntiBounce(antiBounceSlow);
+		_vfd->clearScreen();
+		last_heading = INT_MAX;
+	}
+	
+	// find waypoint with uuid
+	auto wps = mgr->getWaypoints();
+	
+	if(_lineOffset < wps.size()){
+		auto wp = wps[_lineOffset];
+		string name = wp.name;
+		
+		if(name.size() > 12){
+			std::transform(name.begin(), name.end(),name.begin(), ::toupper);
+			name = truncate(name, 22);
+			_vfd->setCursor(0,8);
+			_vfd->setFont(VFD::FONT_MINI);
+		}
+		else{
+			_vfd->setCursor(0,10);
+			_vfd->setFont(VFD::FONT_5x7);
+		}
+		
+		_vfd->printPacket("%s", name.c_str());
+		
+		uint8_t col = 0;
+		uint8_t topRow = 22;
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,topRow);
+		_vfd->printPacket("LAT/LONG");
+		
+		_vfd->setCursor(midX +20, topRow);
+		_vfd->printPacket("BEARING");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		
+		GPSLocation_t here;
+		GPSVelocity_t velocity;
+		if(gps->GetLocation(here) & here.isValid){
+			auto r = GPSmgr::dist_bearing(here,wp.location);
+			
+			_vfd->setCursor(col+10, topRow+10 );
+			
+			_vfd->printPacket("%-9s",  distanceString(r.first * 0.6213711922).c_str());
+			//		_vfd->printPacket("%6.2fmi", r.first * 0.6213711922);
+			
+			int bearing = int(r.second);
+			
+			string ordinal[] =  {"N ","NE","E ", "SE","S ","SW","W ","NW"} ;
+			string dir = ordinal[int(floor((bearing / 45) + 0.5)) % 8]  ;
+			
+			_vfd->setCursor(midX +25 ,topRow+10);
+			_vfd->printPacket("%3d\xa0\x1c%2s\x1d ", bearing, dir.c_str());
+			
+			int heading = INT_MAX;
+			
+			if(gps->GetVelocity(velocity) && velocity.isValid){
+				//save heading
+				last_heading  = int(velocity.heading);
+				heading =  int( r.second - velocity.heading );
+				
+				//				printf("r: %5.1f vel: %5.1f = %d\n", r.second,  velocity.heading,  heading);
+				
+			}
+			else if( last_heading != INT_MAX){
+				heading =  int( r.second - last_heading );
+			}
+			
+			if( heading != INT_MAX){
+				_vfd->setCursor(col+10,topRow+22);
+				_vfd->printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
+			}
+		}
+		
+		string utm = GPSmgr::UTMString(wp.location);
+		vector<string> v = split<string>(utm, " ");
+		
+		_vfd->setFont(VFD::FONT_MINI);
+		_vfd->setCursor(2,height -10);
+		_vfd->printPacket("LAT/LONG:");
+		
+		_vfd->setFont(VFD::FONT_5x7) ;
+		_vfd->setCursor(0, height );
+		_vfd->printPacket(" %-18s", utm.c_str());
+	}
+	
+	drawTimeBox();
 }
