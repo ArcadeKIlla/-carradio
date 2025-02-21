@@ -155,14 +155,8 @@ class PiCarMgr {
 	bool setECUtime(struct timespec time);
 	
 	bool setRelay1(bool state);
-    
-    // Menu display functions
-    void displayRadioMenu();
-    void displayAudioMenu();
-    void displayDebugMenu();
-    void displaySettingsMenu();
-    
-    // MARK: - scanner Channels
+	
+	// MARK: - scanner Channels
 	
 	bool setScannerChannel(RadioMgr::radio_mode_t mode, uint32_t  freq);
 	bool clearScannerChannel(RadioMgr::radio_mode_t mode, uint32_t  freq);
@@ -224,6 +218,10 @@ private:
 	nlohmann::json GetScannerChannelJSON();
  
 	void displayMenu();
+	void displayRadioMenu();
+	void displayAudioMenu();
+	void displayDebugMenu();
+	void displaySettingsMenu();
 	void displayShutdownMenu();
 	vector<string> settingsMenuItems();
 	void setDisplayMode(menu_mode_t menuMode);
@@ -340,3 +338,4 @@ private:
 	struct gpiod_line*		_gpio_relay1;
 #endif
 };
+
