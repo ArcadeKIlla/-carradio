@@ -3070,21 +3070,44 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 }
 
 void PiCarMgr::displayAudioMenu() {
-    vector<string> items = {"Volume", "Balance", "Equalizer", "Source"};
-    _display.showMenuScreen(items, 0, "Audio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
-        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
-            switch(selectedIndex) {
+    vector<string> menu_items = {
+        "Volume",
+        "Balance",
+        "Fader",
+        "Bass",
+        "Treble",
+        "Midrange",
+        "Exit"
+    };
+
+    _display.showMenuScreen(menu_items, 0, "Audio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if (didSucceed && action == DisplayMgr::KNOB_CLICK) {
+            switch (selectedIndex) {
                 case 0: // Volume
-                    _audio.showVolumeControl();
+                    showVolumeChange();
                     break;
+
                 case 1: // Balance
-                    _audio.showBalanceControl();
+                    showBalanceChange();
                     break;
-                case 2: // Equalizer
-                    _audio.showEqualizerControl();
+
+                case 2: // Fader
+                    showFaderChange();
                     break;
-                case 3: // Source
-                    _audio.showSourceControl();
+
+                case 3: // Bass
+                    showBassChange();
+                    break;
+
+                case 4: // Treble
+                    showTrebleChange();
+                    break;
+
+                case 5: // Midrange
+                    showMidrangeChange();
+                    break;
+
+                default:
                     break;
             }
         }
