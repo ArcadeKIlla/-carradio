@@ -224,10 +224,6 @@ private:
 	nlohmann::json GetScannerChannelJSON();
  
 	void displayMenu();
-	void displayRadioMenu();
-	void displayAudioMenu();
-	void displayDebugMenu();
-	void displaySettingsMenu();
 	void displayShutdownMenu();
 	vector<string> settingsMenuItems();
 	void setDisplayMode(menu_mode_t menuMode);

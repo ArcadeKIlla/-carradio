@@ -2938,25 +2938,37 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 }
 
 void PiCarMgr::displayRadioMenu() {
-    _display.clear();
-    _display.setLine(0, "Radio Menu");
-    _display.write();
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(WHITE);
+    _display.setCursor(0,0);
+    _display.println("Radio Menu");
+    _display.display();
 }
 
 void PiCarMgr::displayAudioMenu() {
-    _display.clear();
-    _display.setLine(0, "Audio Menu");
-    _display.write();
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(WHITE);
+    _display.setCursor(0,0);
+    _display.println("Audio Menu");
+    _display.display();
 }
 
 void PiCarMgr::displayDebugMenu() {
-    _display.clear();
-    _display.setLine(0, "Debug Menu");
-    _display.write();
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(WHITE);
+    _display.setCursor(0,0);
+    _display.println("Debug Menu");
+    _display.display();
 }
 
 void PiCarMgr::displaySettingsMenu() {
-    _display.clear();
-    _display.setLine(0, "Settings Menu");
-    _display.write();
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(WHITE);
+    _display.setCursor(0,0);
+    _display.println("Settings Menu");
+    _display.display();
 }
