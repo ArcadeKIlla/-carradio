@@ -2936,3 +2936,27 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 	return success;
 
 }
+
+void PiCarMgr::displayRadioMenu() {
+    _display.clear();
+    _display.setLine(0, "Radio Menu");
+    _display.write("");
+}
+
+void PiCarMgr::displayAudioMenu() {
+    _display.clear();
+    _display.setLine(0, "Audio Menu");
+    _display.write("");
+}
+
+void PiCarMgr::displayDebugMenu() {
+    _display.clear();
+    _display.setLine(0, "Debug Menu");
+    _display.write("");
+}
+
+void PiCarMgr::displaySettingsMenu() {
+    _display.clear();
+    _display.setLine(0, "Settings Menu");
+    _display.write("");
+}
