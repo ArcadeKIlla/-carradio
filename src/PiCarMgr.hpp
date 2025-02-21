@@ -229,6 +229,7 @@ private:
  
 	void displayMenu();
 	void displayRadioMenu();
+	void displayDebugMenu();
 	void displaySettingsMenu();
 	void displayShutdownMenu();
 	vector<string> settingsMenuItems();
