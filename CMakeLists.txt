@@ -41,6 +41,9 @@ endif()
 set(RTLSDR_INCLUDE_DIRS ${RTLSDR_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR})
 set(RTLSDR_LIBRARIES    ${RTLSDR_LIBRARY} ${LIBUSB_LIBRARY})
 
+# Set language for minmea source files
+set_source_files_properties(src/minmea.c PROPERTIES LANGUAGE C)
+
 add_executable(carradio
     src/main.cpp
     src/PiCarMgr.cpp
@@ -48,6 +51,7 @@ add_executable(carradio
     src/SSD1306_LCD.cpp
     src/PiCarMgr.cpp
     src/RadioMgr.cpp
+    src/GPSmgr.cpp
     src/PiCarCAN.cpp
     src/VFD.cpp
     src/DuppaKnob.cpp

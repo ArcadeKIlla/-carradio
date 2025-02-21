@@ -25,8 +25,10 @@
 #include "DuppaLEDRing.hpp"
 #include "DuppaKnob.hpp"
 #include "RadioMgr.hpp"
+#include "GPSmgr.hpp"
 
 using namespace std;
+
 
 class DisplayMgr {
 	
@@ -44,7 +46,7 @@ public:
 	bool begin(const char* path, speed_t speed, int &error);
 	void stop();
 
-	bool reset();
+	 bool reset();
 		
 	// LED effects
 	void LEDeventStartup();
@@ -70,6 +72,9 @@ public:
 		MODE_RADIO,
 		MODE_SCANNER,
 		MODE_CANBUS,
+		MODE_GPS,
+		MODE_GPS_WAYPOINTS,
+		MODE_GPS_WAYPOINT,
 		MODE_DTC,
 		MODE_DTC_INFO,
 		MODE_INFO,
@@ -119,6 +124,72 @@ public:
 	void showMessage(string message = "", time_t timeout = 0, voidCallback_t cb = nullptr );
 	
 	typedef std::function<void(knob_action_t action)> knobCallBack_t;
+	void showGPS(knobCallBack_t cb = nullptr);
+
+	typedef std::function<void(bool didSucceed,
+										string uuid,
+										knob_action_t action)> showWaypointsCallBack_t;
+	
+	void showWaypoints( string intitialUUID,
+ 							 time_t timeout = 0,
+							 showWaypointsCallBack_t cb = nullptr);
+	
+	void showWaypoint(string uuid,  showWaypointsCallBack_t cb = nullptr) ;
+
+	
+	typedef std::function<void(bool didSucceed,
+										RadioMgr::channel_t channel,
+										knob_action_t action)> showScannerChannelsCallBack_t;
+
+	void showScannerChannels( RadioMgr::channel_t initialChannel = {RadioMgr::MODE_UNKNOWN, 0},
+							 		time_t timeout = 0,
+									 showScannerChannelsCallBack_t cb = nullptr);
+ 
+	typedef std::function<void(bool didSucceed,
+										RadioMgr::channel_t channel,
+										knob_action_t action)> showChannelCallBack_t;
+
+	void showChannel( RadioMgr::channel_t channel,
+						  showChannelCallBack_t cb = nullptr);
+  
+	typedef std::function<void(bool didSucceed,
+										string strOut)> editStringCallBack_t;
+
+	void editString(string title = "", string strIn = "",
+						 editStringCallBack_t cb = nullptr);
+
+	void showStartup();
+	void showInfo(time_t timeout = 0);
+	void showDTC();
+	void showDTCInfo(string code);
+ 
+	void showDimmerChange();	
+	void showBalanceChange();
+	void showFaderChange();
+	void showSquelchChange();
+	
+	typedef std::function<void(double)> menuSliderSetterCallBack_t;
+	typedef std::function<double()> menuSliderGetterCallBack_t;
+
+	void showSliderScreen(
+								 string title,
+								 string right_text 	= "R",
+								 string left_text 	= "L",
+								 time_t timeout = 0,
+								 menuSliderGetterCallBack_t getterCB = nullptr,
+								 menuSliderSetterCallBack_t setCB = nullptr,
+ 								 boolCallback_t doneCB  = nullptr);
+	
+	typedef std::function<void(int)>menuSelectionSilderSetterCallBack_t;
+	
+	void showSelectionSilderScreen(
+								 string title,
+								 std::vector<string> choices,
+								 int initialChoice = 0,
+ 								 time_t timeout = 0,
+								 menuSelectionSilderSetterCallBack_t setCB = nullptr,
+								 boolCallback_t doneCB  = nullptr);
+ 
 	void showRadioChange();
 	void showScannerChange(bool force = true);
 	void showAirplayChange();
@@ -179,6 +250,9 @@ private:
 	bool processSelectorKnobActionForSquelch( knob_action_t action);
 	bool processSelectorKnobActionForDimmer( knob_action_t action);
 	bool processSelectorKnobActionForDTC( knob_action_t action);
+	bool processSelectorKnobActionForGPS( knob_action_t action);
+	bool processSelectorKnobActionForGPSWaypoints( knob_action_t action);
+	bool processSelectorKnobActionForGPSWaypoint( knob_action_t action);
 	bool processSelectorKnobActionForEditString( knob_action_t action);
 	bool processSelectorKnobActionForScannerChannels( knob_action_t action);
 	bool processSelectorKnobActionForChannelInfo( knob_action_t action);
@@ -186,6 +260,8 @@ private:
 	 
 	void drawRadioScreen(modeTransition_t transition);
 	void drawScannerScreen(modeTransition_t transition);
+ 
+	void drawGPSScreen(modeTransition_t transition);
  
 	void drawCANBusScreen(modeTransition_t transition);
 	void drawCANBusScreen1(modeTransition_t transition);
@@ -212,6 +288,10 @@ private:
 
 	void drawTimeBox();
 	void drawEditStringScreen(modeTransition_t transition);
+
+	// waypoint stuff
+	void drawGPSWaypointsScreen(modeTransition_t transition);
+	void drawGPSWaypointScreen(modeTransition_t transition);
 
 	//chanel management stuff
 	void drawScannerChannels(modeTransition_t transition);
@@ -241,6 +321,8 @@ private:
 	menuSelectionSliderCBInfo_t * _menuSelectionSliderCBInfo = NULL;
  
 	
+	showWaypointsCallBack_t _wayPointCB;
+	showScannerChannelsCallBack_t _scannnerChannelsCB;
 	knobCallBack_t _knobCB;
 	voidCallback_t	_simpleCB;
 	
