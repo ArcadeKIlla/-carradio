@@ -49,13 +49,17 @@ add_executable(carradio
     src/PiCarMgr.cpp
     src/DisplayMgr.cpp
     src/SSD1306_LCD.cpp
+    src/SSD1306.cpp
+    src/I2C.cpp
+    src/DuppaEncoder.cpp
+    src/DuppaKnob.cpp
+    src/DuppaLEDRing.cpp
+    src/Filter.cpp
     src/PiCarMgr.cpp
     src/RadioMgr.cpp
     src/GPSmgr.cpp
     src/PiCarCAN.cpp
     src/VFD.cpp
-    src/DuppaKnob.cpp
-    src/DuppaLEDRing.cpp
     src/ErrorMgr.cpp
     src/FrameDB.cpp
     src/AudioOutput.cpp
