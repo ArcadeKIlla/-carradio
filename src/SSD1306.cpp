@@ -24,11 +24,8 @@
 #define SSD1306_SETCOMPINS 0xDA
 #define SSD1306_SETVCOMDETECT 0xDB
 
-// Font data - basic 5x7 font
-static const uint8_t font[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, // Space
-    // ... Add more characters as needed
-};
+// Font data will be implemented when text rendering is needed
+// For now, we're only using basic graphics primitives
 
 SSD1306::SSD1306(uint8_t i2cAddress) 
     : _i2cAddress(i2cAddress), 
