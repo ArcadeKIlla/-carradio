@@ -137,12 +137,13 @@ bool DisplayMgr::begin(const char* path, speed_t speed){
 	return begin(path, speed, error);
 }
 
-bool DisplayMgr::begin(const char* path, speed_t speed,  int &error){
-	
-	_isSetup = false;
-	
-	if(!_vfd->begin(path,speed,error))
-		throw Exception("failed to setup VFD ");
+bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
+    _isSetup = false;
+    
+    if(!_vfd->begin(path, speed, error)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr VFD initialization failed with error %d", error);
+        throw Exception("failed to setup VFD");
+    }
 	
 	if( !(_rightRing.begin(rightRingAddress, error)
 			&& _leftRing.begin(leftRingAddress, error)
