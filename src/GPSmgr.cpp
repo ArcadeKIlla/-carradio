@@ -341,6 +341,12 @@ pair<double,double>  GPSmgr::dist_bearing(GPSLocation_t p1, GPSLocation_t p2){
 	return std::make_pair(dist, b_deg);
 }
 
+string GPSmgr::latlonString(GPSLocation_t loc) {
+    char str[64];
+    snprintf(str, sizeof(str), "%.6f, %.6f", loc.latitude, loc.longitude);
+    return string(str);
+}
+
 // MARK: -  UBX decode
  
 #define DEBUG_UBX 0

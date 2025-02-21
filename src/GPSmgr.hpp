@@ -126,7 +126,7 @@ public:
 	static pair<double,double> dist_bearing(GPSLocation_t p1, GPSLocation_t p2);
 	
 	static string headingStringFromHeading(double  heading); // "N ","NE","E ", "SE","S ","SW","W ","NW"
-
+	static string latlonString(GPSLocation_t loc);
 
 private:
 	bool 				_isSetup = false;
