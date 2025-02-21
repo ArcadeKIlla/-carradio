@@ -2397,7 +2397,7 @@ void PiCarMgr::displayRadioMenu() {
                     break;
                     
                 case 1: // Presets
-                    displayScannerChannels({mode, freq});
+                    displayScannerChannels({mode,freq});
                     break;
                     
                 case 2: // Scanner
@@ -2508,106 +2508,115 @@ void PiCarMgr::displaySettingsMenu(){
 	
 }
 
+void PiCarMgr::showVolumeChange() {
+    _display.showSliderScreen(
+        "Volume",
+        "Max",
+        "Min",
+        0,
+        [=]() { return _audio.volume(); },
+        [=](double val) { _audio.setVolume(val); }
+    );
+}
 
-void PiCarMgr::displayShutdownMenu(){
-	
-	constexpr time_t timeout_secs = 10;
-	
+void PiCarMgr::showBalanceChange() {
+    _display.showSliderScreen(
+        "Balance",
+        "Right",
+        "Left",
+        0,
+        [=]() { return _audio.balance(); },
+        [=](double val) { _audio.setBalance(val); }
+    );
+}
 
-	vector<string> menu_items = {
-		"Manual",
-		"10 Seconds",
-		"20 Seconds",
-		"30 Seconds",
-		"1 Minute",
-		"Now",
-		"-",
-		"Exit"
-	};
-	
-	uint intitialItem = (uint) menu_items.size() -1;
-		
-	if(!_autoShutdownMode) {
-		intitialItem = 0;
-	}
-	else {
-		if(_shutdownDelay < 11) intitialItem = 1;
-		else if(_shutdownDelay < 21) intitialItem = 2;
-		else if(_shutdownDelay < 31) intitialItem = 3;
-	}
+void PiCarMgr::showFaderChange() {
+    _display.showSliderScreen(
+        "Fader",
+        "Front",
+        "Rear",
+        0,
+        [=]() { return _audio.fader(); },
+        [=](double val) { _audio.setFader(val); }
+    );
+}
 
-	_display.showMenuScreen(menu_items,
-									intitialItem,
-									"Shutdown Delay",
-									timeout_secs,
-									[=](bool didSucceed,
-										 uint newSelectedItem,
-										 DisplayMgr::knob_action_t action ){
-		
-		if(didSucceed) {
-			
-			if(action){
-				
-				bool didupdate = true;
-				
-				switch (newSelectedItem) {
-						
-					case 0:
-						_autoShutdownMode = false;
-						break;
+void PiCarMgr::showBassChange() {
+    _display.showSliderScreen(
+        "Bass",
+        "Max",
+        "Min",
+        0,
+        [=]() { return _audio.bass(); },
+        [=](double val) { _audio.setBass(val); }
+    );
+}
 
-					case 1:
-						_autoShutdownMode = true;
-						_shutdownDelay = 10;
-						break;
+void PiCarMgr::showTrebleChange() {
+    _display.showSliderScreen(
+        "Treble",
+        "Max",
+        "Min",
+        0,
+        [=]() { return _audio.treble(); },
+        [=](double val) { _audio.setTreble(val); }
+    );
+}
 
-						
-					case 2:
-						_autoShutdownMode = true;
-						_shutdownDelay = 20;
-						break;
- 
-					case 3:
-						_autoShutdownMode = true;
-						_shutdownDelay = 30;
-						break;
-						
-					case 4:
-						_autoShutdownMode = true;
-						_shutdownDelay = 60;
-						break;
+void PiCarMgr::showMidrangeChange() {
+    _display.showSliderScreen(
+        "Midrange",
+        "Max",
+        "Min",
+        0,
+        [=]() { return _audio.midrange(); },
+        [=](double val) { _audio.setMidrange(val); }
+    );
+}
 
-					case 5:
-						didupdate = false;
-						doShutdown();
-						break;
-						
-					default:
-						
-						didupdate = false;
-					break;
-				}
-				
-				
-				if(_lastMenuMode != MENU_UNKNOWN){
-					// restore old mode thast was set in main menu
-					setDisplayMode(_lastMenuMode);
-				}
-				else	// fallback
-				{
-					_display.showTime();
-				}
+void PiCarMgr::displayAudioMenu() {
+    vector<string> menu_items = {
+        "Volume",
+        "Balance",
+        "Fader",
+        "Bass",
+        "Treble",
+        "Midrange",
+        "Exit"
+    };
 
-				
-				if(didupdate) {
-					saveRadioSettings();
-					_db.savePropertiesToFile();
-				}
-			}
-			
-		}
-	});
-	
+    _display.showMenuScreen(menu_items, 0, "Audio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if (didSucceed && action == DisplayMgr::KNOB_CLICK) {
+            switch (selectedIndex) {
+                case 0: // Volume
+                    showVolumeChange();
+                    break;
+
+                case 1: // Balance
+                    showBalanceChange();
+                    break;
+
+                case 2: // Fader
+                    showFaderChange();
+                    break;
+
+                case 3: // Bass
+                    showBassChange();
+                    break;
+
+                case 4: // Treble
+                    showTrebleChange();
+                    break;
+
+                case 5: // Midrange
+                    showMidrangeChange();
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    });
 }
 
 void PiCarMgr::scannerDoubleClicked(){
@@ -2616,7 +2625,7 @@ void PiCarMgr::scannerDoubleClicked(){
 		
 		_radio.pauseScan(true);
 		
-		RadioMgr::radio_mode_t  mode;
+		RadioMgr::radio_mode_t  mode  = _radio.radioMode();
 		uint32_t						freq;
 		_radio.queueGetFrequencyandMode(mode, freq);  // Use queueGetFrequencyandMode instead of getCurrentFrequencyandMode
 		
@@ -3067,49 +3076,4 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
  
 	return success;
 
-}
-
-void PiCarMgr::displayAudioMenu() {
-    vector<string> menu_items = {
-        "Volume",
-        "Balance",
-        "Fader",
-        "Bass",
-        "Treble",
-        "Midrange",
-        "Exit"
-    };
-
-    _display.showMenuScreen(menu_items, 0, "Audio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
-        if (didSucceed && action == DisplayMgr::KNOB_CLICK) {
-            switch (selectedIndex) {
-                case 0: // Volume
-                    showVolumeChange();
-                    break;
-
-                case 1: // Balance
-                    showBalanceChange();
-                    break;
-
-                case 2: // Fader
-                    showFaderChange();
-                    break;
-
-                case 3: // Bass
-                    showBassChange();
-                    break;
-
-                case 4: // Treble
-                    showTrebleChange();
-                    break;
-
-                case 5: // Midrange
-                    showMidrangeChange();
-                    break;
-
-                default:
-                    break;
-            }
-        }
-    });
 }

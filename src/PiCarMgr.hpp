@@ -182,6 +182,15 @@ class PiCarMgr {
 	
 	bool getWaypointInfo(string uuid, waypoint_prop_t &prop);
 	
+	// Audio control functions
+	void showVolumeChange();
+	void showBalanceChange(); 
+	void showFaderChange();
+	void showBassChange();
+	void showTrebleChange();
+	void showMidrangeChange();
+	void displayAudioMenu();
+	
 private:
 	
 	typedef enum :int {
