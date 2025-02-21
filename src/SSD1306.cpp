@@ -1,4 +1,5 @@
 #include "SSD1306.hpp"
+#include "ErrorMgr.hpp"
 #include <algorithm>
 #include <cstring>
 
