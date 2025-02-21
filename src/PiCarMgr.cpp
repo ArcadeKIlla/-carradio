@@ -3068,3 +3068,25 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 	return success;
 
 }
+
+void PiCarMgr::displayAudioMenu() {
+    vector<string> items = {"Volume", "Balance", "Equalizer", "Source"};
+    _display.showMenuScreen(items, 0, "Audio Menu", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
+            switch(selectedIndex) {
+                case 0: // Volume
+                    _audio.showVolumeControl();
+                    break;
+                case 1: // Balance
+                    _audio.showBalanceControl();
+                    break;
+                case 2: // Equalizer
+                    _audio.showEqualizerControl();
+                    break;
+                case 3: // Source
+                    _audio.showSourceControl();
+                    break;
+            }
+        }
+    });
+}
