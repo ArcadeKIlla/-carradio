@@ -15,7 +15,6 @@
 #include <time.h>
 #include <unistd.h>
 
-
 #include <sys/time.h>
 #include "RtlSdr.hpp"
 #include "SDRDecoder.hpp"
@@ -27,7 +26,6 @@
 #include "AirplayInput.hpp"
 
 using namespace std;
-
 
 class RadioMgr {
 	
@@ -112,6 +110,12 @@ public:
 //	uint32_t nextFrequency(bool up, bool constrain = false);
 	
 	bool hasAirplay();
+	
+	bool queueGetFrequencyandMode(radio_mode_t &mode, uint32_t &freq) {
+		mode = _mode;
+		freq = _frequency;
+		return true;
+	}
 	
 private:
 
@@ -203,4 +207,3 @@ private:
 	pthread_mutex_t 	_channelmutex = PTHREAD_MUTEX_INITIALIZER;
 
 };
-

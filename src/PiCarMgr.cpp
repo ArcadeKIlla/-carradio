@@ -215,13 +215,9 @@ bool PiCarMgr::begin(){
 	if(_display.begin(path_display, 0)) {  // Speed parameter ignored for I2C
 		printf("Display started\n");
 		// Test display
-		_display.clearScreen();
-		_display.setFont(VFD::FONT_10x14);
-		_display.setCursor(0, 0);
-		_display.write("CarRadio");
-		_display.setFont(VFD::FONT_MINI);
-		_display.setCursor(0, 20);
-		_display.write("Initializing...");
+		_display.reset();  // This will clear the screen
+		_display.printPacket("CarRadio");  // Use printPacket instead of direct write
+		_display.printPacket("\nInitializing...");  // Use newline instead of setCursor
 		sleep(2);
 	} else {
 		printf("Failed to start Display\n");
@@ -1446,7 +1442,7 @@ bool PiCarMgr::periodicCAN_CB_Radio293(canid_t &can_id, vector<uint8_t> &bytes){
 			uint16_t  freq =  _radio.frequency() /1.0e5;
  
 			vector<uint8_t>  packet = {
-				static_cast<uint8_t> (mode),
+				static_cast<uint8_t>(mode),
 				0x01,
 				static_cast<uint8_t> (freq >> 8),
 				static_cast<uint8_t> (freq & 0xFF) ,
@@ -1486,6 +1482,7 @@ void PiCarMgr::PiCarLoop(){
 	bool volWasClicked = false;
 	bool volWasDoubleClicked = false;
 	bool volWasMoved = false;
+	bool volMovedCW = false;  // Add this variable declaration
 
 	try{
 		
@@ -2646,8 +2643,8 @@ void PiCarMgr::scannerDoubleClicked(){
 		
 		RadioMgr::radio_mode_t  mode;
 		uint32_t						freq;
-		_radio.getCurrentScannerChannel(mode, freq);
- 
+		_radio.queueGetFrequencyandMode(mode, freq);  // Use queueGetFrequencyandMode instead of getCurrentFrequencyandMode
+		
 		displayScannerChannels({mode,freq});
 	}
 		 
@@ -2761,8 +2758,8 @@ void PiCarMgr::tunerDoubleClicked(){
 			
 			RadioMgr::radio_mode_t  mode;
 			uint32_t						freq;
-			_radio.getCurrentFrequencyandMode(mode, freq);
- 
+			_radio.queueGetFrequencyandMode(mode, freq);  // Use queueGetFrequencyandMode instead of getCurrentFrequencyandMode
+			
 			displayScannerChannels({mode,freq});
 		}
 	}
