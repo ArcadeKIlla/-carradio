@@ -142,7 +142,7 @@ PiCarMgr * PiCarMgr::shared() {
 }
 
 
-PiCarMgr::PiCarMgr(){
+PiCarMgr::PiCarMgr(): _display(DisplayMgr::OLED_DISPLAY){
 	_isSetup = false;
 	_isRunning = false;
 	_autoShutdownMode = false;
@@ -159,7 +159,6 @@ PiCarMgr::PiCarMgr(){
 	_canPeriodAudioTaskID = 0;
 	_shouldSendRadioCAN = false;
 	_tuner_mode = TUNE_ALL;
-	_display = DisplayMgr(DisplayMgr::OLED_DISPLAY);
 	
 	signal(SIGKILL, sigHandler);
 	signal(SIGHUP, sigHandler);
@@ -213,17 +212,17 @@ bool PiCarMgr::begin(){
 	_isRunning = true;
 	
 	// start display
-	if(_displayMgr.begin(path_display, B9600)){
+	if(_display.begin(path_display, B9600)){
 		printf("Display started\n");
 
 		// Test OLED display
-		_displayMgr.clearScreen();
-		_displayMgr.setFont(VFD::FONT_10x14);
-		_displayMgr.setCursor(0, 0);
-		_displayMgr.write("CarRadio");
-		_displayMgr.setFont(VFD::FONT_MINI);
-		_displayMgr.setCursor(0, 20);
-		_displayMgr.write("Initializing...");
+		_display.clearScreen();
+		_display.setFont(VFD::FONT_10x14);
+		_display.setCursor(0, 0);
+		_display.write("CarRadio");
+		_display.setFont(VFD::FONT_MINI);
+		_display.setCursor(0, 20);
+		_display.write("Initializing...");
 		sleep(2);  // Give time to see the display
 	} else {
 		printf("Failed to start Display\n");
@@ -1480,9 +1479,19 @@ void PiCarMgr::PiCarLoop(){
 	
 	PRINT_CLASS_TID;
 	
- 	bool 	firstRun = false;
+	bool 	firstRun = false;
 	bool	waitingForTunerLongPress 	= false;
 	struct timespec	lastTunerPressed = {0,0};
+	
+	bool tunerWasMoved = false;
+	bool tunerMovedCW = false;
+	bool tunerWasClicked = false;
+	bool tunerWasDoubleClicked = false;
+	bool tunerIsPressed = false;
+	bool tunerLongPress = false;
+	bool volWasClicked = false;
+	bool volWasDoubleClicked = false;
+	bool volWasMoved = false;
 
 	try{
 		
@@ -1511,17 +1520,6 @@ void PiCarMgr::PiCarLoop(){
 			uint8_t volKnobStatus = 0;
 			uint8_t tunerKnobStatus  = 0;
 			
-			bool volMovedCW 		= false;
-			bool volWasClicked 	= false;
-			bool volWasDoubleClicked 	= false;
-			bool volWasMoved 		= false;
-			
-			bool tunerMovedCW 	= false;
-			bool tunerWasClicked = false;
-			bool tunerWasDoubleClicked 	= false;
-			bool tunerIsPressed = false;
-			bool tunerLongPress 	= false;
-
 			// loop until status changes
 			for(;;) {
 				
@@ -1889,6 +1887,9 @@ void PiCarMgr::PiCarLoop(){
 		}
 	}
 	catch ( const Exception& e)  {
+		
+		// display error on fail..
+		
 		printf("\tError %d %s\n\n", e.getErrorNumber(), e.what());
 		
 		if(e.getErrorNumber()	 == ENXIO){
