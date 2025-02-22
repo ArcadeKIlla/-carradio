@@ -498,4 +498,7 @@ private:
     RGB _leftKnobColor;
     double _dimLevel;       // 0.0 = off ,  1.0  = full on.
     bool _backlightKnobs;
+
+    EncoderBase* rightEncoder() { return _rightEncoder; }
+    EncoderBase* leftEncoder() { return _leftEncoder; }
 };
