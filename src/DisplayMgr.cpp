@@ -141,51 +141,51 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         throw Exception("failed to setup VFD");
     }
 	
-	if( !(_rightRing.begin(rightRingAddress, error)
-			&& _leftRing.begin(leftRingAddress, error)
-			&& _rightKnob.begin(rightKnobAddress, error)
-			&& _leftKnob.begin(leftKnobAddress, error)
+	if( !(_rightRing->begin(rightRingAddress, error)
+			&& _leftRing->begin(leftRingAddress, error)
+			&& _rightKnob->begin(rightKnobAddress, error)
+			&& _leftKnob->begin(leftKnobAddress, error)
 			)){
 		throw Exception("failed to setup LEDrings ");
 	}
 	
 	// flip the ring numbers
-	_rightRing.setOffset(14,true);
-	_leftRing.setOffset(14, true);		// slight offset for volume control of zero
+	_rightRing->setOffset(14,true);
+	_leftRing->setOffset(14, true);		// slight offset for volume control of zero
 	
 	if( _vfd->reset()
-		&& _rightRing.reset()
-		&& _leftRing.reset()
-		&& _rightRing.clearAll()
-		&& _leftRing.clearAll())
+		&& _rightRing->reset()
+		&& _leftRing->reset()
+		&& _rightRing->clearAll()
+		&& _leftRing->clearAll())
 		_isSetup = true;
 	
 	if(_isSetup) {
 		
-		_rightKnob.setAntiBounce(antiBounceDefault);
-		_leftKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
+		_leftKnob->setAntiBounce(antiBounceDefault);
 		
-		_rightKnob.setDoubleClickTime(doubleClickTime);
-		_leftKnob.setDoubleClickTime(doubleClickTime);
+		_rightKnob->setDoubleClickTime(doubleClickTime);
+		_leftKnob->setDoubleClickTime(doubleClickTime);
 		
-		_leftRing.reset();
-		_rightRing.reset();
+		_leftRing->reset();
+		_rightRing->reset();
 		
 		// Set for normal operation
-		_rightRing.setConfig(0x01);
-		_leftRing.setConfig(0x01);
+		_rightRing->setConfig(0x01);
+		_leftRing->setConfig(0x01);
 		
 		// full scaling -- control current with global curent
-		_rightRing.SetScaling(0xFF);
-		_leftRing.SetScaling(0xFF);
+		_rightRing->SetScaling(0xFF);
+		_leftRing->SetScaling(0xFF);
 		
 		// set full bright
-		_rightRing.SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
-		_leftRing.SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
+		_rightRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
+		_leftRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
 		
 		// clear all values
-		_rightRing.clearAll();
-		_leftRing.clearAll();
+		_rightRing->clearAll();
+		_leftRing->clearAll();
 		
 		_eventQueue = {};
 		_ledEvent = 0;
@@ -295,21 +295,21 @@ void DisplayMgr::runLEDEventStartup(){
 		ledEventSet(LED_EVENT_STARTUP_RUNNING,LED_EVENT_ALL );
 		
 		ledStep = 0;
-		_leftRing.clearAll();
-		_rightRing.clearAll();
+		_leftRing->clearAll();
+		_rightRing->clearAll();
 	}
 	else if( _ledEvent & LED_EVENT_STARTUP_RUNNING ){
 		if(ledStep < 24 ){
 			
 			DuppaLEDRing::led_block_t data = {{0,0,0}};
 			data[mod(++ledStep, 24)] = {255,255,255};
-			_leftRing.setLEDs(data);
-			_rightRing.setLEDs(data);
+			_leftRing->setLEDs(data);
+			_rightRing->setLEDs(data);
 		}
 		else {
 			ledEventSet(0, LED_EVENT_STARTUP_RUNNING);
-			_leftRing.clearAll();
-			_rightRing.clearAll();
+			_leftRing->clearAll();
+			_rightRing->clearAll();
 		}
 	}
 }
@@ -347,11 +347,11 @@ void DisplayMgr::runLEDEventMute(){
 				// muted LED scales between 1 and 24
 				int ledvol = volume*23;
 				for (int i = 0 ; i < 24; i++)
-					_leftRing.setGREEN(i, i <= ledvol?0xff:0 );
+					_leftRing->setGREEN(i, i <= ledvol?0xff:0 );
 				
 			}
 			else {
-				_leftRing.clearAll();
+				_leftRing->clearAll();
 			}
 		}
 	}
@@ -383,7 +383,7 @@ void DisplayMgr::runLEDEventVol(){
 			int ledvol = volume*23;
 			
 			for (int i = 0 ; i < 24; i++) {
-				_leftRing.setGREEN(i, i <= ledvol?0xff:0 );
+				_leftRing->setGREEN(i, i <= ledvol?0xff:0 );
 			}
 			
 		}
@@ -392,7 +392,7 @@ void DisplayMgr::runLEDEventVol(){
 			
 			// scan the LEDS off
 			for (int i = 0; i < 24; i++) {
-				_leftRing.setColor( i, 0, 0, 0);
+				_leftRing->setColor( i, 0, 0, 0);
 			}
 			
 		}
@@ -409,14 +409,14 @@ void DisplayMgr::runLEDEventScanner(){
 	// did we enter scanner mode?
 	if((_ledEvent & (LED_EVENT_SCAN_STEP | LED_EVENT_SCAN_HOLD)) &&  !inScannerMode){
 		// run scannerMode intro animation
-		_rightRing.clearAll();
+		_rightRing->clearAll();
 		
 		// scan the LEDS off
 		for (int i = 0; i < 24; i++) {
 			
-			_rightRing.setColor( i, 255, 0, 0);
+			_rightRing->setColor( i, 255, 0, 0);
 			usleep(5000);
-			_rightRing.setColor( i, 0, 0, 0);
+			_rightRing->setColor( i, 0, 0, 0);
 		}
 		usleep(10000);
 		inScannerMode = true;
@@ -431,13 +431,13 @@ void DisplayMgr::runLEDEventScanner(){
 		}
 		else {
 			ledStep = 0;
-			_rightRing.clearAll();
+			_rightRing->clearAll();
 		}
 		
 		
 		DuppaLEDRing::led_block_t data = {{0,0,0}};
 		data[ledStep] = {255,0,0};
-		_rightRing.setLEDs(data);
+		_rightRing->setLEDs(data);
 		ledStep = mod(ledStep+1, 24);
 		ledEventSet(LED_EVENT_SCAN_RUNNING, LED_EVENT_SCAN_STEP);
 	}
@@ -449,7 +449,7 @@ void DisplayMgr::runLEDEventScanner(){
 		
 		DuppaLEDRing::led_block_t data = {{0,0,0}};
 		data[ledStep] = {0,255,0};
-		_rightRing.setLEDs(data);
+		_rightRing->setLEDs(data);
 		ledEventSet(LED_EVENT_SCAN_RUNNING, LED_EVENT_SCAN_HOLD);
 	}
 	else 	if( _ledEvent & LED_EVENT_SCAN_STOP ){
@@ -458,7 +458,7 @@ void DisplayMgr::runLEDEventScanner(){
 		inScannerMode = false;
 		
 		ledEventSet(0, LED_EVENT_SCAN_RUNNING | LED_EVENT_SCAN_STOP | LED_EVENT_SCAN_HOLD );
-		_rightRing.clearAll();
+		_rightRing->clearAll();
 	}
 }
 
@@ -504,10 +504,10 @@ void DisplayMgr::runLEDEventTuner(){
 	if(didPin) {
 		for (int i = 0 ; i < 24; i++) {
 			if( i == offset){
-				_rightRing.setColor(i, 16, 16, 16);
+				_rightRing->setColor(i, 16, 16, 16);
 			}
 			else {
-				_rightRing.setColor(i, 0, 0, 0);
+				_rightRing->setColor(i, 0, 0, 0);
 			}
 		}
 	}
@@ -517,16 +517,16 @@ void DisplayMgr::runLEDEventTuner(){
 			uint8_t off2 =  mod(offset+1, 24);
 			
 			if( i == offset){
-				_rightRing.setColor(i, 0, 0, 255);
+				_rightRing->setColor(i, 0, 0, 255);
 			}
 			else if(i == off1) {
-				_rightRing.setColor(i, 16, 16, 16);
+				_rightRing->setColor(i, 16, 16, 16);
 			}
 			else if(i == off2) {
-				_rightRing.setColor(i, 16, 16, 16);
+				_rightRing->setColor(i, 16, 16, 16);
 			}
 			else {
-				_rightRing.setColor(i, 0, 0, 0);
+				_rightRing->setColor(i, 0, 0, 0);
 			}
 		}
 	}
@@ -545,7 +545,7 @@ void DisplayMgr::runLEDEventTuner(){
 			
 			// scan the LEDS off
 			for (int i = 0; i < 24; i++) {
-				_rightRing.setColor( i, 0, 0, 0);
+				_rightRing->setColor( i, 0, 0, 0);
 			}
 		}
 		
@@ -635,8 +635,8 @@ void DisplayMgr::LEDUpdateLoop(){
 		
 		if( theLedEvent & (LED_EVENT_STOP)){
 			ledEventSet(0, LED_EVENT_STOP);
-			_leftRing.clearAll();
-			_rightRing.clearAll();
+			_leftRing->clearAll();
+			_rightRing->clearAll();
 		}
 		
 		if( theLedEvent & (LED_EVENT_STARTUP | LED_EVENT_STARTUP_RUNNING))
@@ -1224,13 +1224,13 @@ void DisplayMgr::drawMenuScreen(modeTransition_t transition){
 	//	uint8_t maxCol = width / 7;
 	
 	if(transition == TRANS_LEAVING) {
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING) {
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		_vfd->clearScreen();
 		auto title = _menuTitle;
 		
@@ -1945,18 +1945,18 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 	//			 	RadioMgr::muxstring(radio->radioMuxMode()).c_str() );
 	
 	if(transition == TRANS_LEAVING) {
-		_rightRing.clearAll();
+		_rightRing->clearAll();
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING) {
 		_vfd->clearScreen();
-		_rightRing.clearAll();
+		_rightRing->clearAll();
 		
 	}
 	
 	if(transition == TRANS_IDLE) {
-		_rightRing.clearAll();
+		_rightRing->clearAll();
 	}
 	
 	
@@ -1976,7 +1976,7 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 			// we might need an extra refresh if switching modes
 			if(lastMode != mode){
 				_vfd->clearScreen();
-				_rightRing.clearAll();
+				_rightRing->clearAll();
 				lastMode = mode;
 			}
 			
@@ -2509,8 +2509,8 @@ void DisplayMgr::drawShutdownScreen(){
 	//	printf("shutdown display");
 	_vfd->clearScreen();
 	_vfd->clearScreen();
-	_rightRing.clearAll();
-	_leftRing.clearAll();
+	_rightRing->clearAll();
+	_leftRing->clearAll();
 	
 	TRY(_vfd->setFont(VFD::FONT_5x7));
 	TRY(_vfd->setCursor(10,35));
@@ -2531,12 +2531,12 @@ void DisplayMgr::drawCANBusScreen(modeTransition_t transition){
 	constexpr int busTimeout = 5;
 	
 	if(transition == TRANS_ENTERING) {
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		_vfd->clearScreen();
 	}
 	
 	if(transition == TRANS_LEAVING) {
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		return;
 	}
 	
@@ -2632,7 +2632,7 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 		}
 		cachedProps.clear();
 		db->getCanbusDisplayProps(cachedProps);
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		_vfd->clearScreen();
 		
 		// draw titles
@@ -2666,7 +2666,7 @@ void DisplayMgr::drawCANBusScreen1(modeTransition_t transition){
 		}
 		cachedProps.clear();
 		
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		return;
 	}
 	
@@ -2863,7 +2863,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 
 	if(transition == TRANS_LEAVING) {
 		
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
@@ -2872,7 +2872,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 	
 	 
 	if(transition == TRANS_ENTERING){
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 	 
 	 		_vfd->clearScreen();
 		// top line
@@ -4301,7 +4301,7 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	
 	if(transition == TRANS_LEAVING) {
 		
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
@@ -4311,7 +4311,7 @@ void DisplayMgr::drawGPSWaypointsScreen(modeTransition_t transition){
 	auto wps 	= mgr->getWaypoints();
 	
 	if(transition == TRANS_ENTERING){
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		
 		_vfd->clearScreen();
 		_vfd->setFont(VFD::FONT_5x7) ;
@@ -4455,13 +4455,13 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 	static int	last_heading = INT_MAX;
 	
 	if(transition == TRANS_LEAVING) {
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING){
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		_vfd->clearScreen();
 		last_heading = INT_MAX;
 	}
@@ -4600,7 +4600,7 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 	int centerY = _vfd->height() /2;
 	
 	if(transition == TRANS_LEAVING) {
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		return;
 	}
@@ -4611,7 +4611,7 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 	
 	
 	if(transition == TRANS_ENTERING){
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		_vfd->clearScreen();
 		
 		_vfd->setCursor(0,7);
@@ -4779,7 +4779,7 @@ void DisplayMgr::drawScannerChannels(modeTransition_t transition){
 	
 	if(transition == TRANS_LEAVING) {
 		
-		_rightKnob.setAntiBounce(antiBounceDefault);
+		_rightKnob->setAntiBounce(antiBounceDefault);
 		_vfd->clearScreen();
 		lastOffset = 0;
 		firstLine = 0;
@@ -4789,7 +4789,7 @@ void DisplayMgr::drawScannerChannels(modeTransition_t transition){
 	auto channels = mgr->getScannerChannels();
 	
 	if(transition == TRANS_ENTERING){
-		_rightKnob.setAntiBounce(antiBounceSlow);
+		_rightKnob->setAntiBounce(antiBounceSlow);
 		
 		_vfd->clearScreen();
 		_vfd->setFont(VFD::FONT_5x7) ;

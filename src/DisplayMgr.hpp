@@ -483,6 +483,10 @@ private:
     EncoderBase* _leftEncoder;
     EncoderBase* _rightEncoder;
 
+    // Duppa knobs (only for Duppa encoders)
+    DuppaKnob* _leftKnob;
+    DuppaKnob* _rightKnob;
+
     // Optional LED rings (only for Duppa encoders)
     DuppaLEDRing* _leftRing;
     DuppaLEDRing* _rightRing;
@@ -490,7 +494,6 @@ private:
     // Thread management
     pthread_t _displayThread;
     pthread_t _ledThread;
-    pthread_mutex_t _mutex = PTHREAD_MUTEX_INITIALIZER;
     bool _running;
 
     // colors and brightness
@@ -499,6 +502,8 @@ private:
     double _dimLevel;       // 0.0 = off ,  1.0  = full on.
     bool _backlightKnobs;
 
+    DuppaKnob* rightKnob() { return _rightKnob; }
+    DuppaKnob* leftKnob() { return _leftKnob; }
     EncoderBase* rightEncoder() { return _rightEncoder; }
     EncoderBase* leftEncoder() { return _leftEncoder; }
 };
