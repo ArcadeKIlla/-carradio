@@ -52,8 +52,6 @@ using namespace Utils;
 const char* 	PiCarMgr::PiCarMgr_Version = "1.0.1";
 
 // Update the path to use I2C
-const char* path_display  = "/dev/i2c-1";  // Standard I2C bus on Raspberry Pi
-
 const char* gpioPath 				= "/dev/gpiochip0";
 constexpr uint 	gpio_relay1_line_number	= 26;
 #if USE_GPIO_INTERRUPT
@@ -212,7 +210,13 @@ bool PiCarMgr::begin(){
 	_isRunning = true;
 	
 	// start display with I2C
-	if(_display.begin(path_display, 0)) {  // Speed parameter ignored for I2C
+#if defined(__APPLE__)
+	const char* path_display = "/dev/i2c.display";  // Mac testing path
+#else
+	const char* path_display = "/dev/i2c-1";  // Raspberry Pi default I2C bus
+#endif
+
+	if(_display.begin(path_display)) {  
 		printf("Display started\n");
 		_display.showStartup();  // Use the dedicated startup display method
 	} else {

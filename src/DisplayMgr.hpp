@@ -26,9 +26,10 @@
 #include "DuppaKnob.hpp"
 #include "RadioMgr.hpp"
 #include "GPSmgr.hpp"
+#include "EncoderBase.hpp"
+#include "GenericEncoder.hpp"
 
 using namespace std;
-
 
 class DisplayMgr {
 	
@@ -39,7 +40,28 @@ public:
 		OLED_DISPLAY
 	};
 	
-	DisplayMgr(DisplayType type = VFD_DISPLAY);
+	enum EncoderType {
+		DUPPA_ENCODER,
+		GENERIC_ENCODER
+	};
+
+	struct EncoderConfig {
+		EncoderType type;
+		union {
+			struct {
+				uint8_t address;
+			} duppa;
+			struct {
+				int clkPin;
+				int dtPin;
+				int swPin;
+			} generic;
+		};
+	};
+
+	DisplayMgr(DisplayType displayType = VFD_DISPLAY,
+               EncoderConfig leftConfig = {DUPPA_ENCODER, {.duppa = {0x40}}},
+               EncoderConfig rightConfig = {DUPPA_ENCODER, {.duppa = {0x41}}});
 	~DisplayMgr();
 		
 	bool begin(const char* path, speed_t speed =  B19200);
@@ -452,20 +474,31 @@ private:
 	bool 					_isRunning = false;
  
  	// display
-	VFD* _vfd;
 	bool _isSetup;
-	
-	// colors and brightness
-	RGB 					_rightKnobColor;
-	RGB 					_leftKnobColor;
-	double				_dimLevel;		// 0.0 = off ,  1.0  = full on.
-	bool 					_backlightKnobs;
-	
-	
-	// devices
-	DuppaLEDRing		_rightRing;
-	DuppaLEDRing		_leftRing;
-	DuppaKnob			_leftKnob;
-	DuppaKnob			_rightKnob;
- 
+	DisplayType _displayType;
+	VFD* _vfd;
+
+    // Encoder configuration
+    EncoderConfig _leftEncoderConfig;
+    EncoderConfig _rightEncoderConfig;
+    
+    // Base class pointers for encoders
+    EncoderBase* _leftEncoder;
+    EncoderBase* _rightEncoder;
+
+    // Optional LED rings (only for Duppa encoders)
+    DuppaLEDRing* _leftRing;
+    DuppaLEDRing* _rightRing;
+
+    // Thread management
+    pthread_t _displayThread;
+    pthread_t _ledThread;
+    pthread_mutex_t _mutex;
+    bool _running;
+
+    // colors and brightness
+    RGB                  _rightKnobColor;
+    RGB                  _leftKnobColor;
+    double               _dimLevel;       // 0.0 = off ,  1.0  = full on.
+    bool                 _backlightKnobs;
 };

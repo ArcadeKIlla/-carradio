@@ -567,6 +567,9 @@ void DisplayMgr::LEDUpdateLoop(){
 			continue;
 		}
 		
+		// Skip LED updates if no LED rings are present
+		if (!_leftRing && !_rightRing) continue;
+		
 		pthread_mutex_lock (&_led_mutex);
 		
 		// wait for event.
@@ -598,6 +601,7 @@ void DisplayMgr::LEDUpdateLoop(){
 				clock_gettime(TIMEDWAIT_CLOCK, &ts1);
 				printf("LEDUpdateLoop:  pthread_cond_timedwait delay = %ld\n",
 						 timespec_to_ms(timespec_sub(ts1, now)));
+				
 #endif
 				
 				break;
@@ -677,76 +681,67 @@ bool DisplayMgr::setBrightness(double level) {
 	if(_isSetup){
 		_dimLevel = level;
 		
+		if(_vfd) {
+			_vfd->setBrightness(level);
+		}
 		
-		// vfd 0 -7
-		uint8_t vfdLevel =  level * 7.0 ;
-		uint8_t ledCurrent = calculateRingCurrent(vfdLevel);
-		//	printf("setBrightness %f %d\n", level, ledCurrent);
+		if(_leftRing) {
+			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
+			_leftRing->setCurrent(ringLevel);
+		}
 		
-		if(vfdLevel == 0) vfdLevel  = 1;
-		success = _vfd->setBrightness(vfdLevel);
-		
-		_rightRing.SetScaling(ledCurrent);
-		_leftRing.SetScaling(ledCurrent);
-		
-		_rightKnob.setBrightness(level);
-		_leftKnob.setBrightness(level);
+		if(_rightRing) {
+			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
+			_rightRing->setCurrent(ringLevel);
+		}
 		
 	}
 	
-	return success;
-}
-
-bool DisplayMgr::setKnobBackLight(bool isOn){
-	_backlightKnobs = isOn;
-	
-	//	printf("setKnobBackLight %d\n", isOn);
-	
-	switch (_current_mode) {
-			
-		default:
-			
-			if(_backlightKnobs){
-				setKnobColor(KNOB_RIGHT, RGB::Lime);
-				setKnobColor(KNOB_LEFT, RGB::Lime);
-			}
-			else {
-				setKnobColor(KNOB_RIGHT, RGB::Black);
-				setKnobColor(KNOB_LEFT, RGB::Black);
-			}
-			
-			
-			
-	}
 	return true;
 }
 
-
+bool DisplayMgr::setKnobBackLight(bool isOn){
+    if(!_isSetup) return false;
+    
+    _backlightKnobs = isOn;
+    
+    if(_leftRing) {
+        if(isOn)
+            _leftRing->setColor(_leftKnobColor);
+        else
+            _leftRing->setColor(RGB());
+    }
+    
+    if(_rightRing) {
+        if(isOn)
+            _rightRing->setColor(_rightKnobColor);
+        else
+            _rightRing->setColor(RGB());
+    }
+    
+    return true;
+}
 
 bool DisplayMgr::setKnobColor(knob_id_t knob, RGB color){
-	bool success = false;
-	
-	//	printf("setKnobColor %d  (%3d,%3d,%3d)\n", knob, color.r, color.b, color.g);
-	
-	
-	if(_isSetup){
-		
-		// calculate color vs brightness
-		RGB effectiveColor = color;
-		
-		switch (knob) {
-			case KNOB_RIGHT:
-				success = _rightKnob.setColor(effectiveColor);
-				break;
-				
-			case KNOB_LEFT:
-				success =  _leftKnob.setColor(effectiveColor);
-				break;
-				
-		}
-	}
-	
-	return success;
+    if(!_isSetup) return false;
+    
+    switch(knob) {
+        case RIGHT_KNOB:
+            _rightKnobColor = color;
+            if(_rightRing && _backlightKnobs) {
+                _rightRing->setColor(color);
+            }
+            break;
+            
+        case LEFT_KNOB:
+            _leftKnobColor = color;
+            if(_leftRing && _backlightKnobs) {
+                _leftRing->setColor(color);
+            }
+            break;
+    }
+    
+    return true;
 }
 
  
@@ -922,7 +917,6 @@ bool  DisplayMgr::usesSelectorKnob(){
 		case MODE_GPS:
 		case MODE_GPS_WAYPOINT:
 		case MODE_CHANNEL_INFO:
-		case MODE_GPS_WAYPOINTS:
 		case MODE_SCANNER_CHANNELS:
 		case MODE_DIMMER:
 		case MODE_SQUELCH:
@@ -2005,7 +1999,7 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					uint8_t buff2[] = {
 						VFD::VFD_CLEAR_AREA,
 						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY-16),
-						static_cast<uint8_t> (128),static_cast<uint8_t> (centerY+4)};
+						static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+4)};
 					_vfd->writePacket(buff2, sizeof(buff2));
 					
 					string str = "- NOT PLAYING -";
@@ -2356,7 +2350,7 @@ void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 		uint8_t buff2[] = {
 			VFD::VFD_CLEAR_AREA,
 			static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY+9),
-			static_cast<uint8_t> (0+100),static_cast<uint8_t> (centerY+19)};
+			static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+19)};
 		
 		_vfd->writePacket(buff2, sizeof(buff2));
 	}
@@ -2993,13 +2987,6 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 			}
 			std::transform(str.begin(), str.end(),str.begin(), ::toupper);
 			rows.push_back( {"WIFI", str });
-		}
-	
-		/* Amplifier  and Jeep Radio Numbers*/
-		{
-	 		rows.push_back( {"RADIO PN ", mgr->partNumber() });
-			rows.push_back( {"RADIO SN", mgr->serialNumber()});
- 			rows.push_back( {"AMP PN", "56046006AL" });
 		}
 
 		
