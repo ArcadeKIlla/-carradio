@@ -23,6 +23,7 @@
 class I2C  {
  
 public:
+	// Change i2c_block_t definition to use vector
 	typedef std::vector<uint8_t> i2c_block_t;
 	
 	I2C();
@@ -65,5 +66,3 @@ private:
 	uint8_t     _devAddr;
  
 };
-
- 
