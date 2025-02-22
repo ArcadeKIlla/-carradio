@@ -91,7 +91,7 @@ static string distanceString(double d) {
 };
 
 
-DisplayMgr::DisplayMgr(DisplayType type){
+DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, EncoderConfig rightConfig){
 	_eventQueue = {};
 	_ledEvent = 0;
 	_isSetup = false;
@@ -99,13 +99,14 @@ DisplayMgr::DisplayMgr(DisplayType type){
 	_dimLevel = 1.0;
 	_lastAirplayStatusTime = {0,0};
 	_airplayStatus = 0;
-	_menuSliderCBInfo = NULL;
-	_menuSelectionSliderCBInfo = NULL;
-
-	// Initialize display
-	_vfd = (type == VFD_DISPLAY) ? 
-		static_cast<VFD*>(new VFD()) : 
-		static_cast<VFD*>(new SSD1306_VFD());
+	_displayType = displayType;
+	_leftEncoderConfig = leftConfig;
+	_rightEncoderConfig = rightConfig;
+	_leftEncoder = nullptr;
+	_rightEncoder = nullptr;
+	_leftRing = nullptr;
+	_rightRing = nullptr;
+	_vfd = nullptr;
 
 	pthread_create(&_updateTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::DisplayUpdateThread, (void*)this);
@@ -131,16 +132,11 @@ DisplayMgr::~DisplayMgr(){
 	pthread_mutex_destroy(&_mutex);
 }
 
-bool DisplayMgr::begin(const char* path, speed_t speed){
-	int error = 0;
-	
-	return begin(path, speed, error);
-}
-
 bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     _isSetup = false;
     
-    if(!_vfd->begin(path, speed, error)) {
+    if(!_vfd->begin(path, speed)) {
+        error = errno;
         ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr VFD initialization failed with error %d", error);
         throw Exception("failed to setup VFD");
     }
@@ -222,6 +218,30 @@ void DisplayMgr::stop(){
 	
 	if(_vfd) {
 		_vfd->stop();
+	}
+	
+	if(_leftEncoder) {
+		_leftEncoder->stop();
+		delete _leftEncoder;
+		_leftEncoder = nullptr;
+	}
+	
+	if(_rightEncoder) {
+		_rightEncoder->stop();
+		delete _rightEncoder;
+		_rightEncoder = nullptr;
+	}
+	
+	if(_leftRing) {
+		_leftRing->stop();
+		delete _leftRing;
+		_leftRing = nullptr;
+	}
+	
+	if(_rightRing) {
+		_rightRing->stop();
+		delete _rightRing;
+		_rightRing = nullptr;
 	}
 	
 	_isSetup = false;
