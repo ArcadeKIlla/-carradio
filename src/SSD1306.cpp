@@ -2,6 +2,7 @@
 #include "ErrorMgr.hpp"
 #include <algorithm>
 #include <cstring>
+#include <unistd.h>
 
 // SSD1306 Commands
 #define SSD1306_MEMORYMODE 0x20
@@ -230,7 +231,7 @@ void SSD1306::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bo
 
 bool SSD1306::sendCommand(uint8_t command) {
     uint8_t buffer[2] = {0x00, command};  // Control byte 0x00 for command
-    if (write(_i2c._fd, buffer, 2) != 2) {
+    if (::write(_i2c._fd, buffer, 2) != 2) {
         ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 command 0x%02X failed", command);
         return false;
     }
@@ -239,7 +240,7 @@ bool SSD1306::sendCommand(uint8_t command) {
 
 void SSD1306::sendData(uint8_t data) {
     uint8_t buffer[2] = {0x40, data};  // Control byte 0x40 for data
-    write(_i2c._fd, buffer, 2);
+    ::write(_i2c._fd, buffer, 2);
 }
 
 void SSD1306::sendData(const std::vector<uint8_t>& buffer) {
@@ -248,5 +249,5 @@ void SSD1306::sendData(const std::vector<uint8_t>& buffer) {
     txBuffer.reserve(buffer.size() + 1);
     txBuffer.push_back(0x40);  // Control byte for data
     txBuffer.insert(txBuffer.end(), buffer.begin(), buffer.end());
-    write(_i2c._fd, txBuffer.data(), txBuffer.size());
+    ::write(_i2c._fd, txBuffer.data(), txBuffer.size());
 }
