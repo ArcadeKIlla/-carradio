@@ -354,7 +354,7 @@ void I2C::writeBlock(uint8_t regAddr, const i2c_block_t& data) {
     }
 }
 
-bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t & block) {
+bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t& block) {
     if(!_isSetup) return false;
 
     union i2c_smbus_data data;
@@ -371,7 +371,7 @@ bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t & block) {
     return true;
 }
 
-bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t block) {
+bool I2C::writeBlock(uint8_t regAddr, uint8_t size, const i2c_block_t& block) {
     if(!_isSetup) return false;
 
     union i2c_smbus_data data;
