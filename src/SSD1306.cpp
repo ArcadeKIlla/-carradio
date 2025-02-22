@@ -229,19 +229,24 @@ void SSD1306::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bo
 }
 
 bool SSD1306::sendCommand(uint8_t command) {
-    bool success = _i2c.writeByte(0x00, command);  // 0x00 for command
-    if (!success) {
+    uint8_t buffer[2] = {0x00, command};  // Control byte 0x00 for command
+    if (write(_i2c._fd, buffer, 2) != 2) {
         ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 command 0x%02X failed", command);
+        return false;
     }
-    return success;
+    return true;
 }
 
 void SSD1306::sendData(uint8_t data) {
-    _i2c.writeByte(0x40, data);  // 0x40 for data
+    uint8_t buffer[2] = {0x40, data};  // Control byte 0x40 for data
+    write(_i2c._fd, buffer, 2);
 }
 
 void SSD1306::sendData(const std::vector<uint8_t>& buffer) {
-    for (uint8_t data : buffer) {
-        sendData(data);
-    }
+    // For bulk data, we need to send the control byte followed by data bytes
+    std::vector<uint8_t> txBuffer;
+    txBuffer.reserve(buffer.size() + 1);
+    txBuffer.push_back(0x40);  // Control byte for data
+    txBuffer.insert(txBuffer.end(), buffer.begin(), buffer.end());
+    write(_i2c._fd, txBuffer.data(), txBuffer.size());
 }

@@ -18,11 +18,12 @@
 #include <termios.h>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 class I2C  {
  
 public:
-	typedef uint8_t  i2c_block_t [32];
+	typedef std::vector<uint8_t> i2c_block_t;
 	
 	I2C();
 	~I2C();
@@ -55,11 +56,13 @@ public:
 	bool readByte(uint8_t regAddr,  unsigned char * byte);
  	bool readBlock(uint8_t regAddr, uint8_t size, unsigned char * block );
 
+	friend class SSD1306;  // Allow SSD1306 to access private members
+
 private:
 
+	bool        _isSetup;
 	int 			_fd;
-	int 			_devAddr;
-	bool 			_isSetup;
+	uint8_t     _devAddr;
  
 };
 
