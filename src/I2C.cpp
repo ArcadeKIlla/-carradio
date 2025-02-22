@@ -341,40 +341,32 @@ bool I2C::readWord(uint8_t regAddr,  uint16_t& word, bool swap){
 
 bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t & block) {
     if(!_isSetup) return false;
-
-    union i2c_smbus_data data;
-    memset(&data, 0, sizeof(data));
-    data.block[0] = size;
-
-    if(i2c_smbus_access(_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno, "I2C readBlock failed");
-        return false;
-    }
-
+    
     block.resize(size);
-    std::copy(data.block + 1, data.block + size + 1, block.begin());
-    return true;
+    bool status = readByte(regAddr, block[0]);
+    
+    if(status) {
+        for(int i = 1; i < size; i++) {
+            status &= readByte(block[i]);
+            if(!status) break;
+        }
+    }
+    return status;
 }
 
 bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t block) {
     if(!_isSetup) return false;
-
-    union i2c_smbus_data data;
-    memset(&data, 0, sizeof(data));
-    data.block[0] = size;
-
-    if(size > 32)
-        size = 32;
-
-    for(int i = 0; i < size; i++) {
-        data.block[i + 1] = block[i];
+    
+    if(size > block.size()) return false;
+    
+    bool status = writeByte(regAddr, block[0]);
+    if(status) {
+        for(int i = 1; i < size; i++) {
+            status &= writeByte(block[i]);
+            if(!status) break;
+        }
     }
-
-    if(i2c_smbus_access(_fd, I2C_SMBUS_WRITE, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno, "I2C writeBlock failed");
-        return false;
-    }
-    return true;
+    return status;
 }
 
 bool I2C::readBlock(uint8_t regAddr, uint8_t size, unsigned char * block ){
