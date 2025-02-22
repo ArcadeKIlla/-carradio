@@ -339,22 +339,7 @@ bool I2C::readWord(uint8_t regAddr,  uint16_t& word, bool swap){
 
  */
 
-I2C::i2c_block_t I2C::readBlock(uint8_t regAddr) {
-    i2c_block_t data;
-    data.resize(32);  // Ensure vector has enough space
-    if (i2c_smbus_access(_fd, I2C_SMBUS_READ, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno, "I2C readBlock failed");
-    }
-    return data;
-}
-
-void I2C::writeBlock(uint8_t regAddr, const i2c_block_t& data) {
-    if (i2c_smbus_access(_fd, I2C_SMBUS_WRITE, regAddr, I2C_SMBUS_I2C_BLOCK_DATA, &data) < 0) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno, "I2C writeBlock failed");
-    }
-}
-
-bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t& block) {
+bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t & block) {
     if(!_isSetup) return false;
 
     union i2c_smbus_data data;
@@ -371,7 +356,7 @@ bool I2C::readBlock(uint8_t regAddr, uint8_t size, i2c_block_t& block) {
     return true;
 }
 
-bool I2C::writeBlock(uint8_t regAddr, uint8_t size, const i2c_block_t& block) {
+bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t block) {
     if(!_isSetup) return false;
 
     union i2c_smbus_data data;
