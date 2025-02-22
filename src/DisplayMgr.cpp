@@ -707,12 +707,12 @@ bool DisplayMgr::setBrightness(double level) {
 		
 		if(_leftRing) {
 			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
-			_leftRing->setCurrent(ringLevel);
+			_leftRing->SetGlobalCurrent(ringLevel);
 		}
 		
 		if(_rightRing) {
 			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
-			_rightRing->setCurrent(ringLevel);
+			_rightRing->SetGlobalCurrent(ringLevel);
 		}
 		
 	}
@@ -727,16 +727,24 @@ bool DisplayMgr::setKnobBackLight(bool isOn){
     
     if(_leftRing) {
         if(isOn)
-            _leftRing->setColor(_leftKnobColor);
+            for(uint8_t i = 0; i < 24; i++) {
+                _leftRing->setColor(i, _leftKnobColor);
+            }
         else
-            _leftRing->setColor(RGB());
+            for(uint8_t i = 0; i < 24; i++) {
+                _leftRing->setColor(i, RGB());
+            }
     }
     
     if(_rightRing) {
         if(isOn)
-            _rightRing->setColor(_rightKnobColor);
+            for(uint8_t i = 0; i < 24; i++) {
+                _rightRing->setColor(i, _rightKnobColor);
+            }
         else
-            _rightRing->setColor(RGB());
+            for(uint8_t i = 0; i < 24; i++) {
+                _rightRing->setColor(i, RGB());
+            }
     }
     
     return true;
@@ -746,17 +754,21 @@ bool DisplayMgr::setKnobColor(knob_id_t knob, RGB color){
     if(!_isSetup) return false;
     
     switch(knob) {
-        case RIGHT_KNOB:
+        case KNOB_RIGHT:
             _rightKnobColor = color;
             if(_rightRing && _backlightKnobs) {
-                _rightRing->setColor(color);
+                for(uint8_t i = 0; i < 24; i++) {
+                    _rightRing->setColor(i, color);
+                }
             }
             break;
             
-        case LEFT_KNOB:
+        case KNOB_LEFT:
             _leftKnobColor = color;
             if(_leftRing && _backlightKnobs) {
-                _leftRing->setColor(color);
+                for(uint8_t i = 0; i < 24; i++) {
+                    _leftRing->setColor(i, color);
+                }
             }
             break;
     }

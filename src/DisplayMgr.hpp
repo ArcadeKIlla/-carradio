@@ -232,6 +232,11 @@ public:
 	
 	void clearAPMetaData();
 
+	DuppaKnob* rightKnob() { return _rightKnob; }
+    DuppaKnob* leftKnob() { return _leftKnob; }
+    EncoderBase* rightEncoder() { return _rightEncoder; }
+    EncoderBase* leftEncoder() { return _leftEncoder; }
+
 private:
 	
 	typedef enum  {
@@ -501,9 +506,4 @@ private:
     RGB _leftKnobColor;
     double _dimLevel;       // 0.0 = off ,  1.0  = full on.
     bool _backlightKnobs;
-
-    DuppaKnob* rightKnob() { return _rightKnob; }
-    DuppaKnob* leftKnob() { return _leftKnob; }
-    EncoderBase* rightEncoder() { return _rightEncoder; }
-    EncoderBase* leftEncoder() { return _leftEncoder; }
 };
