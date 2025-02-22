@@ -165,9 +165,12 @@ bool I2C::writeByte(uint8_t regAddr, uint8_t b1){
 	
 	if(!_isSetup) return false;
 
-    // For SSD1306, we need to send data as [regAddr, b1] in a single I2C transaction
-    uint8_t buffer[2] = {regAddr, b1};
-    if (write(_fd, buffer, 2) != 2) {
+    // Use SMBus write byte data command
+    union i2c_smbus_data data;
+    data.byte = b1;
+    
+    if (i2c_smbus_access(_fd, I2C_SMBUS_WRITE, regAddr,
+                         I2C_SMBUS_BYTE_DATA, &data) < 0) {
         ELOG_ERROR(ErrorMgr::FAC_I2C, _devAddr, errno, "I2C write failed (%02x, %02x)", regAddr, b1);
         return false;
     }
