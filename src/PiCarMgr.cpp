@@ -2508,6 +2508,36 @@ void PiCarMgr::displaySettingsMenu(){
 	
 }
 
+void PiCarMgr::displayShutdownMenu() {
+    vector<string> items = {"1 min", "5 min", "10 min", "30 min", "Never"};
+    
+    _display.showMenuScreen(items, 0, "Shutdown Delay", 0, [=](bool didSucceed, uint selectedIndex, DisplayMgr::knob_action_t action) {
+        if(didSucceed && action == DisplayMgr::KNOB_CLICK) {
+            uint16_t delaySeconds = 0;
+            switch(selectedIndex) {
+                case 0: // 1 min
+                    delaySeconds = 60;
+                    break;
+                case 1: // 5 min
+                    delaySeconds = 300;
+                    break;
+                case 2: // 10 min
+                    delaySeconds = 600;
+                    break;
+                case 3: // 30 min
+                    delaySeconds = 1800;
+                    break;
+                case 4: // Never
+                    delaySeconds = 0;
+                    break;
+            }
+            _shutdownDelay = delaySeconds;
+            _autoShutdownMode = (delaySeconds > 0);
+            displaySettingsMenu();
+        }
+    });
+}
+
 void PiCarMgr::showVolumeChange() {
     _display.showSliderScreen(
         "Volume",
