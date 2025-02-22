@@ -258,10 +258,17 @@ bool DuppaLEDRing::setLEDs( led_block_t & leds){
 			data [ issi_led_map[2][i]  -1]  = leds[ledFromOffset(i)].b;
 		};
 		
-		success = selectBank(PAGE0);
-		success &= _i2cPort.writeBlock(1, 24,  data+0);
-		success &= _i2cPort.writeBlock(25, 24,  data+24);
-		success &= _i2cPort.writeBlock(49, 24,  data+48);
+		I2C::i2c_block_t vec_data(24);
+		std::copy(data, data + 24, vec_data.begin());
+		success &= _i2cPort.writeBlock(1, 24, vec_data);
+
+		vec_data.resize(24);
+		std::copy(data + 24, data + 48, vec_data.begin());
+		success &= _i2cPort.writeBlock(25, 24, vec_data);
+
+		vec_data.resize(24);
+		std::copy(data + 48, data + 72, vec_data.begin());
+		success &= _i2cPort.writeBlock(49, 24, vec_data);
 				
 	}
  		return success;
@@ -347,5 +354,3 @@ bool  DuppaLEDRing::setBLUE(uint8_t led_n, uint8_t color){
 	
 	return success;
 }
-
-

@@ -369,19 +369,18 @@ bool I2C::writeBlock(uint8_t regAddr, uint8_t size, i2c_block_t block) {
     return status;
 }
 
-bool I2C::readBlock(uint8_t regAddr, uint8_t size, unsigned char * block ){
-	if(!_isSetup) return false;
-
-	bool status = false;
-
-	memset(block, 0, sizeof(size));
- 
-	status = readByte(regAddr, block[0]);
-	if(status) {
-		for(int i = 1; i < size; i++){
-			status &= readByte( block[i]);
-			if(!status) break;
-		}
-	}
-	return status;
+bool I2C::readBlock(uint8_t regAddr, uint8_t size, unsigned char * block) {
+    if(!_isSetup) return false;
+    
+    bool status = false;
+    memset(block, 0, size);  
+    
+    status = readByte(regAddr, block[0]);
+    if(status) {
+        for(int i = 1; i < size; i++) {
+            status &= readByte(block[i]);
+            if(!status) break;
+        }
+    }
+    return status;
 }
