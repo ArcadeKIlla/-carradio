@@ -55,6 +55,7 @@ add_executable(carradio
     src/DuppaKnob.cpp
     src/DuppaLEDRing.cpp
     src/Filter.cpp
+    src/GenericEncoder.cpp
     src/PiCarMgr.cpp
     src/RadioMgr.cpp
     src/GPSmgr.cpp
