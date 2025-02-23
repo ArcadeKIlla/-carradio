@@ -110,11 +110,11 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 		_vfd = new SSD1306_VFD();
 	}
 
-	// Initialize encoders based on config
+	// Initialize left encoder based on config
 	if (_leftEncoderConfig.type == DUPPA_ENCODER) {
 		_leftKnob = new DuppaKnob();
 		_leftRing = new DuppaLEDRing();
-		_leftEncoder = _leftKnob;
+		_leftEncoder = _leftKnob;  // Safe now that DuppaKnob inherits from EncoderBase
 	} else {
 		_leftKnob = nullptr;
 		_leftRing = nullptr;
@@ -123,10 +123,11 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 										_leftEncoderConfig.generic.swPin);
 	}
 
+	// Initialize right encoder based on config
 	if (_rightEncoderConfig.type == DUPPA_ENCODER) {
 		_rightKnob = new DuppaKnob();
 		_rightRing = new DuppaLEDRing();
-		_rightEncoder = _rightKnob;
+		_rightEncoder = _rightKnob;  // Safe now that DuppaKnob inherits from EncoderBase
 	} else {
 		_rightKnob = nullptr;
 		_rightRing = nullptr;
@@ -143,9 +144,8 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	
 	pthread_create(&_metaReaderTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::MetaDataReaderThread, (void*)this);
-	
-	
 }
+
 
 DisplayMgr::~DisplayMgr(){
 	
@@ -457,7 +457,6 @@ void DisplayMgr::runLEDEventVol(){
 			for (int i = 0; i < 24; i++) {
 				_leftRing->setColor( i, 0, 0, 0);
 			}
-			
 		}
 		
 	}
@@ -1010,7 +1009,7 @@ bool  DisplayMgr::usesSelectorKnob(){
 	switch (_current_mode) {
 		case MODE_CANBUS:
 		case MODE_GPS:
-		case MODE_GPS_WAYPOINT:
+		case MODE_GPS_WAYPOINTS:
 		case MODE_CHANNEL_INFO:
 		case MODE_SCANNER_CHANNELS:
 		case MODE_DIMMER:
@@ -2864,7 +2863,7 @@ void DisplayMgr::drawGPSScreen(modeTransition_t transition){
 		string dir = ordinal[int(floor((last_heading / 45) + 0.5)) % 8]  ;
 		
 		memset(buffer, ' ', sizeof(buffer));
-		sprintf( buffer , "%3d\xa0\x1c%2s\x1d ",last_heading, dir.c_str());
+		sprintf( buffer , "%2s %3d\xa0 %2s",last_heading<0?"<-":"", abs(last_heading), dir.c_str());
 		_vfd->setCursor(midX +20 ,utmRow+20);
 		_vfd->printPacket("%-8s ", buffer);
 	}

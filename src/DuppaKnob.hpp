@@ -7,41 +7,37 @@
 
 #pragma once
 
-#include "RotaryKnob.hpp"
+#include "EncoderBase.hpp"
 #include "DuppaEncoder.hpp"
 #include <stdlib.h>
 
 using namespace std;
  
-class DuppaKnob : public RotaryKnob{
+class DuppaKnob : public EncoderBase{
  
 public:
 
 	DuppaKnob();
-	~DuppaKnob();
+	virtual ~DuppaKnob();
 
-	bool begin(int deviceAddress);
-	bool begin(int deviceAddress,  int &error);
-	void stop();
- 
+    // EncoderBase interface implementation
+    virtual bool begin() override;
+    virtual void stop() override;
+    virtual bool updateStatus() override;
+    virtual bool wasClicked() override;
+    virtual bool wasDoubleClicked() override;
+    virtual bool wasMoved(bool &clockwise) override;
+    virtual bool isPressed() override;
+    virtual bool setAntiBounce(uint8_t period) override;
+    virtual bool setDoubleClickTime(uint8_t period) override;
+
+    // Additional DuppaKnob specific methods
+    bool begin(uint8_t i2cAddr);
+    bool begin(uint8_t i2cAddr, int &error);
 	bool isConnected();
- 	
-	bool wasClicked();
-	bool wasDoubleClicked();
-	bool wasMoved( bool &cw);
-	bool isPressed();	// still down
-
-	bool updateStatus();
-	bool updateStatus(uint8_t &regOut);
 	bool setColor(uint8_t red, uint8_t green, uint8_t blue );
-
 	bool setColor(RGB color);
-
 	bool setBrightness(double level);
-	
-	bool setAntiBounce(uint8_t period); // period * 0.192ms
-	bool setDoubleClickTime(uint8_t period);  // period * 10ms
-
 	
 private:
 	

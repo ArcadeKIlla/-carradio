@@ -5,25 +5,26 @@
 #include <stdbool.h>
 #include <string>
 
-class GenericEncoder {
+class EncoderBase;
+
+class GenericEncoder : public EncoderBase {
 public:
-    GenericEncoder();
-    ~GenericEncoder();
+    GenericEncoder(int clkPin = -1, int dtPin = -1, int swPin = -1);
+    virtual ~GenericEncoder();
 
-    // Initialize with GPIO pin numbers
+    // EncoderBase interface implementation
+    virtual bool begin() override;
+    virtual void stop() override;
+    virtual bool updateStatus() override;
+    virtual bool wasClicked() override;
+    virtual bool wasDoubleClicked() override;
+    virtual bool wasMoved(bool &clockwise) override;
+    virtual bool isPressed() override;
+    virtual bool setAntiBounce(uint8_t period) override;
+    virtual bool setDoubleClickTime(uint8_t period) override;
+
+    // Additional methods
     bool begin(int clkPin, int dtPin, int swPin);
-    void stop();
-
-    // Status checks
-    bool updateStatus();
-    bool wasClicked();
-    bool wasDoubleClicked();
-    bool wasMoved(bool &clockwise);
-    bool isPressed();
-
-    // Configuration
-    bool setAntiBounce(uint8_t period);
-    bool setDoubleClickTime(uint8_t period);
 
 private:
     bool _isSetup;
