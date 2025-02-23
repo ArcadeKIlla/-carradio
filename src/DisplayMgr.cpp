@@ -198,32 +198,59 @@ bool DisplayMgr::begin(const char* path, speed_t speed) {
 bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     _isSetup = false;
     
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initializing VFD at path %s with speed %d", path, speed);
     if(!_vfd->begin(path, speed)) {
         error = errno;
         ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr VFD initialization failed with error %d", error);
         throw Exception("failed to setup VFD");
     }
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: VFD initialization successful");
 	
-	if( !(_rightRing->begin(rightRingAddress, error)
-			&& _leftRing->begin(leftRingAddress, error)
-			&& _rightKnob->begin(rightKnobAddress, error)
-			&& _leftKnob->begin(leftKnobAddress, error)
-			)){
-		throw Exception("failed to setup LEDrings ");
-	}
+    // Initialize each I2C device with detailed logging
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initializing LED rings and knobs...");
+    
+    if(!_rightRing->begin(rightRingAddress, error)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Right LED ring initialization failed at address 0x%02X with error %d", rightRingAddress, error);
+        throw Exception("failed to setup right LED ring");
+    }
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Right LED ring initialized successfully");
+    
+    if(!_leftRing->begin(leftRingAddress, error)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Left LED ring initialization failed at address 0x%02X with error %d", leftRingAddress, error);
+        throw Exception("failed to setup left LED ring");
+    }
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Left LED ring initialized successfully");
+    
+    if(!_rightKnob->begin(rightKnobAddress, error)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Right knob initialization failed at address 0x%02X with error %d", rightKnobAddress, error);
+        throw Exception("failed to setup right knob");
+    }
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Right knob initialized successfully");
+    
+    if(!_leftKnob->begin(leftKnobAddress, error)) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Left knob initialization failed at address 0x%02X with error %d", leftKnobAddress, error);
+        throw Exception("failed to setup left knob");
+    }
+    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Left knob initialized successfully");
 	
 	// flip the ring numbers
+	ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Configuring LED ring offsets...");
 	_rightRing->setOffset(14,true);
 	_leftRing->setOffset(14, true);		// slight offset for volume control of zero
 	
-	if( _vfd->reset()
-		&& _rightRing->reset()
-		&& _leftRing->reset()
-		&& _rightRing->clearAll()
-		&& _leftRing->clearAll())
-		_isSetup = true;
+	ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Resetting and clearing devices...");
+	bool resetSuccess = _vfd->reset() && _rightRing->reset() && _leftRing->reset() 
+	                   && _rightRing->clearAll() && _leftRing->clearAll();
+	
+	if(!resetSuccess) {
+	    ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Failed to reset and clear devices");
+	    throw Exception("failed to reset and clear devices");
+	}
+	
+	_isSetup = true;
 	
 	if(_isSetup) {
+		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Configuring knob parameters...");
 		
 		_rightKnob->setAntiBounce(antiBounceDefault);
 		_leftKnob->setAntiBounce(antiBounceDefault);
@@ -235,6 +262,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
 		_rightRing->reset();
 		
 		// Set for normal operation
+		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Setting LED ring configurations...");
 		_rightRing->setConfig(0x01);
 		_leftRing->setConfig(0x01);
 		
@@ -261,6 +289,8 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
 		
 		resetMenu();
 		showStartup();
+		
+		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initialization completed successfully");
 	}
 	
 	return _isSetup;
@@ -1727,7 +1757,6 @@ void DisplayMgr::DisplayUpdateLoop(){
 					//						shouldRedraw = true;
 					//						shouldUpdate = true;
 					//					}
-					//				}
 				}
 				
 				// check for ay other timeout delay 1.3 secs
@@ -3242,6 +3271,8 @@ void DisplayMgr::drawDimmerScreen(modeTransition_t transition){
 	uint8_t topbox 	= midY -5 ;
 	uint8_t bottombox = midY + 5 ;
 	
+	//	printf("drawDimmerScreen(%d)\n", transition);
+	
 	if(transition == TRANS_LEAVING) {
 		return;
 	}
@@ -3399,7 +3430,7 @@ bool DisplayMgr::processSelectorKnobActionForSelectSlider( knob_action_t action)
 			(savedCB)(true);
 			wasHandled = true;
 		}
-	}
+ 	}
 	
 	return wasHandled;
 }
@@ -3485,34 +3516,6 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 }
  
 
-// MARK: -  Slider Screen
-void DisplayMgr::showSliderScreen(
-											 string title,
-											 string right_text,
-											 string left_text,
-											 time_t timeout,
-											 menuSliderGetterCallBack_t getterCB ,
-											 menuSliderSetterCallBack_t setterCB,
-											 boolCallback_t doneCB){
-	
-	if(_menuSliderCBInfo) free(_menuSliderCBInfo);
-	menuSliderCBInfo_t * cbInfo = (menuSliderCBInfo_t *) malloc(sizeof( menuSliderCBInfo_t));
-	memset(cbInfo, 0, sizeof( menuSliderCBInfo_t));
-	
-	cbInfo->title = title;
-	cbInfo->right_text = right_text;
-	cbInfo->left_text = left_text;
-	cbInfo->timeout = timeout?timeout:5;  // default 5 secs
- 	cbInfo->getCB = getterCB;
-	cbInfo->setCB = setterCB;
-	cbInfo->doneCB = doneCB;
-	
-	_menuSliderCBInfo = cbInfo;
-	
-	setEvent(EVT_PUSH, MODE_SLIDER );
-}
-
-
 void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 	
 //	printf("drawSliderScreen(%d)\n", transition);
@@ -3526,6 +3529,8 @@ void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 	uint8_t rightbox 	= width - 20;
 	uint8_t topbox 	= midY -5 ;
 	uint8_t bottombox = midY + 5 ;
+	
+	//	printf("drawSliderScreen(%d)\n", transition);
 	
 	if(transition == TRANS_LEAVING) {
 		
@@ -3786,7 +3791,6 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 	
 	stringvector vCodes = split<string>(stored, " ");
 	auto totalStored = vCodes.size();
-	
 	stringvector vPending = split<string>(pending, " ");
 	auto totalPending = vPending.size();
 	auto totalCodes = totalStored + totalPending;
@@ -5380,3 +5384,6 @@ bool DisplayMgr::reset() {
     }
     return false;
 }
+```
+
+```cpp
