@@ -35,7 +35,7 @@ public:
     bool begin(uint8_t i2cAddr);
     bool begin(uint8_t i2cAddr, int &error);
 	bool isConnected();
-	bool setColor(uint8_t red, uint8_t green, uint8_t blue );
+	bool setColor(uint8_t red, uint8_t green, uint8_t blue);
 	bool setColor(RGB color);
 	bool setBrightness(double level);
 	
@@ -46,4 +46,5 @@ private:
 	
 	RGB 					_currentColor;
 	double				_brightness;
+	int					_deviceAddress;
 };

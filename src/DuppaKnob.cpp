@@ -12,7 +12,6 @@
 
 
 DuppaKnob::DuppaKnob(){
-	
 	_isSetup = false;
 	_currentColor = RGB::Black;
 	_brightness = 1.0;
@@ -23,24 +22,23 @@ DuppaKnob::~DuppaKnob(){
 	stop();
 }
 
-
 bool DuppaKnob::begin() {
 	if (_deviceAddress < 0) {
 		return false;
 	}
-	return begin(_deviceAddress);
+	int error;
+	return begin(_deviceAddress, error);
 }
 
-bool DuppaKnob::begin(int deviceAddress){
+bool DuppaKnob::begin(uint8_t i2cAddr) {
 	int error = 0;
-	return begin(deviceAddress, error);
+	return begin(i2cAddr, error);
 }
 
- 
-bool DuppaKnob::begin(int deviceAddress, int &error){
+bool DuppaKnob::begin(uint8_t i2cAddr, int &error) {
 	bool status = false;
 
-	_deviceAddress = deviceAddress;
+	_deviceAddress = i2cAddr;
 
 	uint8_t config = DuppaEncoder::INT_DATA
 	| DuppaEncoder::WRAP_DISABLE
@@ -49,42 +47,41 @@ bool DuppaKnob::begin(int deviceAddress, int &error){
 	| DuppaEncoder::RMOD_X1
 	| DuppaEncoder::RGB_ENCODER;
 	
-// pull the interrupt line low when the knob is pressed or moved
+	// pull the interrupt line low when the knob is pressed or moved
 	uint8_t interrupt_config =
 		DuppaEncoder::PUSHR
 	| 	DuppaEncoder::PUSHP
 	| 	DuppaEncoder::RINC
-	| 	DuppaEncoder::RDEC ;
+	| 	DuppaEncoder::RDEC;
 
-	status = _duppa.begin(deviceAddress, config, interrupt_config,  error);
-	
+	status = _duppa.begin(i2cAddr, config, interrupt_config, error);
 	if(status){
-		_isSetup = true;;
+		_isSetup = true;
 	}
+	
 	return status;
 }
 
-void DuppaKnob::stop(){
-	setColor(0,0,0);
-	_duppa.stop();
-	_isSetup = false;
-	
- }
- 
+void DuppaKnob::stop() {
+	if(_isSetup){
+		_duppa.stop();
+		_isSetup = false;
+	}
+}
 
-bool  DuppaKnob::isConnected() {
+bool DuppaKnob::isConnected() {
 	return _isSetup;
 }
- 
-bool DuppaKnob::updateStatus(){
-	uint8_t status;
-	return updateStatus(status);
+
+bool DuppaKnob::updateStatus() {
+	uint8_t status = 0;
+	return _duppa.updateStatus(status);
 }
- 
+
 bool DuppaKnob::updateStatus(uint8_t &statusOut) {
 	return _isSetup && _duppa.updateStatus(statusOut);
 }
- 
+
 bool DuppaKnob::wasClicked(){
  	return _isSetup && _duppa.wasClicked();
 }

@@ -3111,3 +3111,45 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
 	return success;
 
 }
+
+void PiCarMgr::updateEncoders(){
+	
+	if(_isSetup){
+		
+		if(_volKnob){
+			bool clockwise = false;
+			
+			if(_volKnob->updateStatus()){
+				
+				if(_volKnob->wasMoved(clockwise)){
+					if(clockwise)
+						volumeUp();
+					else
+						volumeDown();
+				}
+				
+				if(_volKnob->wasClicked()){
+					toggleMute();
+				}
+			}
+		}
+		
+		if(_tunerKnob){
+			bool clockwise = false;
+			
+			if(_tunerKnob->updateStatus()){
+				
+				if(_tunerKnob->wasMoved(clockwise)){
+					if(clockwise)
+						tunerUp();
+					else
+						tunerDown();
+				}
+				
+				if(_tunerKnob->wasClicked()){
+					toggleTunerMenu();
+				}
+			}
+		}
+	}
+}
