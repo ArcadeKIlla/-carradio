@@ -1,6 +1,6 @@
 #include "GenericEncoder.hpp"
-#include <wiringPi.h>
 #include <sys/time.h>
+#include <gpiod.h>
 
 static uint64_t getCurrentTimeMillis() {
     struct timeval te; 
@@ -18,6 +18,10 @@ GenericEncoder::GenericEncoder(int clkPin, int dtPin, int swPin) {
     _clkPin = clkPin;
     _dtPin = dtPin;
     _swPin = swPin;
+    _chip = nullptr;
+    _clkLine = nullptr;
+    _dtLine = nullptr;
+    _swLine = nullptr;
 }
 
 GenericEncoder::~GenericEncoder() {
@@ -32,76 +36,93 @@ bool GenericEncoder::begin() {
 }
 
 bool GenericEncoder::begin(int clkPin, int dtPin, int swPin) {
-    if (wiringPiSetupGpio() == -1) {
-        return false;
-    }
-
     _clkPin = clkPin;
     _dtPin = dtPin;
     _swPin = swPin;
 
-    pinMode(_clkPin, INPUT);
-    pinMode(_dtPin, INPUT);
-    pinMode(_swPin, INPUT);
-    
-    pullUpDnControl(_clkPin, PUD_UP);
-    pullUpDnControl(_dtPin, PUD_UP);
-    pullUpDnControl(_swPin, PUD_UP);
+    // Open GPIO chip
+    _chip = gpiod_chip_open_by_name("gpiochip0");
+    if (!_chip) {
+        return false;
+    }
 
-    _lastClk = digitalRead(_clkPin);
-    _lastDt = digitalRead(_dtPin);
-    _lastSw = digitalRead(_swPin);
-    _lastPressTime = 0;
-    _lastClickTime = 0;
+    // Get GPIO lines
+    _clkLine = gpiod_chip_get_line(_chip, _clkPin);
+    _dtLine = gpiod_chip_get_line(_chip, _dtPin);
+    _swLine = gpiod_chip_get_line(_chip, _swPin);
+
+    if (!_clkLine || !_dtLine || !_swLine) {
+        stop();
+        return false;
+    }
+
+    // Configure lines as inputs with pull-up
+    if (gpiod_line_request_input(_clkLine, "encoder-clk") < 0 ||
+        gpiod_line_request_input(_dtLine, "encoder-dt") < 0 ||
+        gpiod_line_request_input(_swLine, "encoder-sw") < 0) {
+        stop();
+        return false;
+    }
+
+    // Set initial states
+    _lastClk = gpiod_line_get_value(_clkLine) == 1;
+    _lastDt = gpiod_line_get_value(_dtLine) == 1;
+    _lastSw = gpiod_line_get_value(_swLine) == 1;
 
     _isSetup = true;
     return true;
 }
 
 void GenericEncoder::stop() {
-    if (_isSetup) {
-        // Reset pins to default state
-        pinMode(_clkPin, INPUT);
-        pinMode(_dtPin, INPUT);
-        pinMode(_swPin, INPUT);
-        _isSetup = false;
+    if (_clkLine) {
+        gpiod_line_release(_clkLine);
+        _clkLine = nullptr;
     }
+    if (_dtLine) {
+        gpiod_line_release(_dtLine);
+        _dtLine = nullptr;
+    }
+    if (_swLine) {
+        gpiod_line_release(_swLine);
+        _swLine = nullptr;
+    }
+    if (_chip) {
+        gpiod_chip_close(_chip);
+        _chip = nullptr;
+    }
+    _isSetup = false;
 }
 
 bool GenericEncoder::updateStatus() {
     if (!_isSetup) return false;
 
-    uint64_t currentTime = getCurrentTimeMillis();
-    
-    // Reset state flags
     _wasClicked = false;
     _wasDoubleClicked = false;
     _wasMoved = false;
 
-    // Read current states
-    bool currentClk = digitalRead(_clkPin);
-    bool currentDt = digitalRead(_dtPin);
-    bool currentSw = digitalRead(_swPin);
+    bool currentClk = gpiod_line_get_value(_clkLine) == 1;
+    bool currentDt = gpiod_line_get_value(_dtLine) == 1;
+    bool currentSw = gpiod_line_get_value(_swLine) == 1;
 
-    // Handle rotation
-    if (currentClk != _lastClk && currentTime - _lastPressTime > _antiBouncePeriod) {
+    // Check for rotation
+    if (currentClk != _lastClk) {
         _wasMoved = true;
-        _moveClockwise = (currentDt != currentClk);
-        _lastPressTime = currentTime;
+        _moveClockwise = currentDt != currentClk;
     }
 
-    // Handle button press
-    if (currentSw != _lastSw && currentTime - _lastPressTime > _antiBouncePeriod) {
-        if (currentSw == LOW) {  // Button pressed
-            if (currentTime - _lastClickTime < _doubleClickPeriod) {
-                _wasDoubleClicked = true;
-                _lastClickTime = 0;  // Reset to prevent triple clicks
-            } else {
-                _wasClicked = true;
-                _lastClickTime = currentTime;
-            }
-            _lastPressTime = currentTime;
+    // Check for button press/release
+    if (currentSw != _lastSw && !currentSw) {
+        uint64_t now = getCurrentTimeMillis();
+        
+        if (_lastClickTime > 0 && 
+            (now - _lastClickTime) <= _doubleClickPeriod) {
+            _wasDoubleClicked = true;
+            _lastClickTime = 0;
+        } else {
+            _wasClicked = true;
+            _lastClickTime = now;
         }
+        _lastPressTime = now;
     }
 
     _lastClk = currentClk;
@@ -128,7 +149,8 @@ bool GenericEncoder::wasMoved(bool &clockwise) {
 }
 
 bool GenericEncoder::isPressed() {
-    return _isSetup && digitalRead(_swPin) == LOW;
+    if (!_isSetup) return false;
+    return gpiod_line_get_value(_swLine) == 0;
 }
 
 bool GenericEncoder::setAntiBounce(uint8_t period) {

@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <string>
 #include "EncoderBase.hpp"
+#include <gpiod.h>
 
 class GenericEncoder : public EncoderBase {
 public:
@@ -44,4 +45,10 @@ private:
     bool _wasDoubleClicked;
     bool _wasMoved;
     bool _moveClockwise;
+
+    // gpiod handles
+    struct gpiod_chip *_chip;
+    struct gpiod_line *_clkLine;
+    struct gpiod_line *_dtLine;
+    struct gpiod_line *_swLine;
 };
