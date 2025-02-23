@@ -132,6 +132,11 @@ DisplayMgr::~DisplayMgr(){
 	pthread_mutex_destroy(&_mutex);
 }
 
+bool DisplayMgr::begin(const char* path, speed_t speed) {
+    int error;
+    return begin(path, speed, error);
+}
+
 bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     _isSetup = false;
     
