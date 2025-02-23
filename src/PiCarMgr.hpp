@@ -217,6 +217,9 @@ private:
     static PiCarMgr *sharedInstance;
     bool _isSetup = false;
     bool _isRunning = false;
+    std::atomic<bool> _shouldRun{true};  // Control flag for main loop
+    std::mutex _shutdownMutex;
+    std::condition_variable _shutdownCV;
 
     nlohmann::json GetRadioModesJSON();
     bool updateRadioPrefs();

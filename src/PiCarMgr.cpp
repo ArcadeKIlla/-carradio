@@ -200,9 +200,6 @@ PiCarMgr::~PiCarMgr(){
 
 bool PiCarMgr::begin(){
 	
-	int error;
-	bool success = true;
-	
 	signal(SIGTERM, sigHandler);
 	signal(SIGINT, sigHandler);
 	signal(SIGHUP, sigHandler);
@@ -221,7 +218,7 @@ bool PiCarMgr::begin(){
 		_display.showStartup();  // Use the dedicated startup display method
 	} else {
 		printf("Failed to start Display\n");
-		success = false;
+		return false;
 	}
 	
 	try {
@@ -359,14 +356,21 @@ bool PiCarMgr::begin(){
 
 void PiCarMgr::stop(){
 	
+	// Signal the main loop to stop
+	_isRunning = false;
+	
+	// Wait for the thread to finish
+	{
+		std::unique_lock<std::mutex> lock(_shutdownMutex);
+		_shutdownCV.wait_for(lock, std::chrono::seconds(5), [this] { return !_isRunning; });
+	}
 	
 	int pid = getPidByName("shairport-sync");
 	if(pid > 0){
 		kill(pid, SIGTERM);
 	}
 	
-	
-	if(_isSetup  ){
+	if(_isSetup){
 		_isSetup = false;
 		
 		_dtc.stop();
@@ -1485,7 +1489,7 @@ void PiCarMgr::PiCarLoop(){
 	try{
 		
 
-		while(_isRunning){
+		while(_shouldRun){
 			
 			// if not setup // check back shortly -  we are starting up
 			if(!_isSetup){
@@ -2036,7 +2040,14 @@ void* PiCarMgr::PiCarLoopThread(void *context){
 
 
 void PiCarMgr::PiCarLoopThreadCleanup(void *context){
-	//PiCarMgr* d = (PiCarMgr*)context;
+	PiCarMgr* d = (PiCarMgr*)context;
+	
+	// Signal that we're done
+	{
+		std::unique_lock<std::mutex> lock(d->_shutdownMutex);
+		d->_isRunning = false;
+		d->_shutdownCV.notify_all();
+	}
 	
 	//	printf("cleanup sdr\n");
 }
@@ -2961,6 +2972,7 @@ void PiCarMgr::startControls( std::function<void(bool didSucceed, std::string er
 																	  GPIOD_CONSUMER,
 																	  GPIOD_LINE_REQUEST_FLAG_BIAS_PULL_UP) != 0){
 		ELOG_MESSAGE("Error gpiod_line_request_falling_edge_events %d: %s \n",  gpio_int_line_number, strerror(errno));
+		goto done;
 	}
 	
 	
@@ -3036,7 +3048,6 @@ void PiCarMgr::startCPUInfo( std::function<void(bool didSucceed, std::string err
 	
 	if(cb)
 		(cb)(didSucceed, didSucceed?"": string(strerror(errnum) ));
-	
 }
 
 void PiCarMgr::stopCPUInfo(){
@@ -3065,7 +3076,6 @@ void PiCarMgr::startFan( std::function<void(bool didSucceed, std::string error_t
 	
 	if(cb)
 		(cb)(didSucceed, didSucceed?"": string(strerror(errnum) ));
-	
 }
 
 void PiCarMgr::stopFan(){
@@ -3106,7 +3116,6 @@ void PiCarMgr::startTempSensors( std::function<void(bool didSucceed, std::string
 	
 	if(cb)
 		(cb)(didSucceed, didSucceed?"": string(strerror(errnum) ));
-	
 }
 
 void PiCarMgr::stopTempSensors(){
