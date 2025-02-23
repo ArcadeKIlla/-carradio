@@ -1518,17 +1518,23 @@ void PiCarMgr::PiCarLoop(){
 				{
 					bool status_changed = false;
 					
-					uint8_t newstatus = 0;
 					volKnob->updateStatus();
-					if(newstatus != volKnobStatus) status_changed = true;
-					volKnobStatus = newstatus;
+					volWasClicked = volKnob->wasClicked();
+					volWasDoubleClicked = volKnob->wasDoubleClicked();
+					volWasMoved = volKnob->wasMoved(volMovedCW);
 	
 					tunerKnob->updateStatus();
-					if(newstatus != tunerKnobStatus) status_changed = true;
-					tunerKnobStatus = newstatus;
+					tunerWasClicked = tunerKnob->wasClicked();
+					tunerWasDoubleClicked = tunerKnob->wasDoubleClicked();
+					tunerWasMoved = tunerKnob->wasMoved(tunerMovedCW);
+					tunerIsPressed = tunerKnob->isPressed();
 	
 					// if changed, break
-					if(status_changed) break;
+					if(volWasClicked ||  volWasDoubleClicked || volWasMoved
+						|| tunerWasClicked  || tunerWasDoubleClicked
+						|| tunerWasMoved  || tunerIsPressed){
+						break;
+					}
  				}
  
 				// or take a nap
@@ -1571,16 +1577,6 @@ void PiCarMgr::PiCarLoop(){
 			// maybe we quit while I was asleep.  bail now
 			if(!_isRunning) continue;
 			
-			volWasClicked 		= volKnob->wasClicked();
-			volWasDoubleClicked = volKnob->wasDoubleClicked();
-			volWasMoved 		= volKnob->wasMoved(volMovedCW);
-			
-			tunerWasClicked 			= tunerKnob->wasClicked();
-			tunerWasDoubleClicked  = tunerKnob->wasDoubleClicked();
-			tunerWasMoved 				= tunerKnob->wasMoved(tunerMovedCW);
-			tunerIsPressed				= tunerKnob->isPressed();
-			tunerLongPress				= false;
-  
 			// MARK:   Tuner button long  press
 	
 			if(!tunerWasClicked && tunerIsPressed){ //button hold down
@@ -2858,7 +2854,7 @@ void PiCarMgr::tunerUp() {
             
         case TUNE_KNOWN: {
             station_info_t info;
-            radio_mode_t mode;
+            RadioMgr::radio_mode_t mode;
             uint32_t freq;
             if (_radio.queueGetFrequencyandMode(mode, freq) && 
                 nextKnownStation(mode, freq, true, info)) {
@@ -2869,7 +2865,7 @@ void PiCarMgr::tunerUp() {
             
         case TUNE_PRESETS: {
             station_info_t info;
-            radio_mode_t mode;
+            RadioMgr::radio_mode_t mode;
             uint32_t freq;
             if (_radio.queueGetFrequencyandMode(mode, freq) && 
                 nextPresetStation(mode, freq, true, info)) {
@@ -2889,7 +2885,7 @@ void PiCarMgr::tunerDown() {
             
         case TUNE_KNOWN: {
             station_info_t info;
-            radio_mode_t mode;
+            RadioMgr::radio_mode_t mode;
             uint32_t freq;
             if (_radio.queueGetFrequencyandMode(mode, freq) && 
                 nextKnownStation(mode, freq, false, info)) {
@@ -2900,7 +2896,7 @@ void PiCarMgr::tunerDown() {
             
         case TUNE_PRESETS: {
             station_info_t info;
-            radio_mode_t mode;
+            RadioMgr::radio_mode_t mode;
             uint32_t freq;
             if (_radio.queueGetFrequencyandMode(mode, freq) && 
                 nextPresetStation(mode, freq, false, info)) {
