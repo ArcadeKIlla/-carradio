@@ -2370,7 +2370,7 @@ void PiCarMgr::displayWaypoint(string uuid){
 	// push selected waypoints
 	_display.showWaypoint(uuid,[=](bool didSucceed,
 											 string uuid,
-											 DisplayMgr::knob_action_t action ) {
+											 DisplayMgr::knob_action_t action ){
 		
 		if(didSucceed) {
 		
@@ -2786,6 +2786,135 @@ void PiCarMgr::tunerDoubleClicked(){
  
 // MARK: -  Knobs and Buttons
 
+void PiCarMgr::updateEncoders(){
+	
+	if(!_isSetup){
+		return;
+	}
+	
+	if(_volKnob){
+		bool clockwise = false;
+		
+		if(_volKnob->updateStatus()){
+			
+			if(_volKnob->wasMoved(clockwise)){
+				if(clockwise)
+					volumeUp();
+				else
+					volumeDown();
+			}
+			
+			if(_volKnob->wasClicked()){
+				toggleMute();
+			}
+		}
+	}
+	
+	if(_tunerKnob){
+		bool clockwise = false;
+		
+		if(_tunerKnob->updateStatus()){
+			
+			if(_tunerKnob->wasMoved(clockwise)){
+				if(clockwise)
+					tunerUp();
+				else
+					tunerDown();
+			}
+			
+			if(_tunerKnob->wasClicked()){
+				toggleTunerMenu();
+			}
+		}
+	}
+}
+
+void PiCarMgr::volumeUp() {
+    // Implement volume up logic
+    _audio.volumeUp();
+    showVolumeChange();
+}
+
+void PiCarMgr::volumeDown() {
+    // Implement volume down logic
+    _audio.volumeDown();
+    showVolumeChange();
+}
+
+void PiCarMgr::toggleMute() {
+    // Implement mute toggle logic
+    _audio.toggleMute();
+    showVolumeChange();
+}
+
+void PiCarMgr::tunerUp() {
+    // Implement tuner up logic
+    switch (_tuner_mode) {
+        case TUNE_ALL:
+            _radio.tuneUp();
+            break;
+            
+        case TUNE_KNOWN: {
+            station_info_t info;
+            if (nextKnownStation(_radio.mode(), _radio.frequency(), true, info)) {
+                _radio.setFrequency(info.frequency);
+            }
+            break;
+        }
+            
+        case TUNE_PRESETS: {
+            station_info_t info;
+            if (nextPresetStation(_radio.mode(), _radio.frequency(), true, info)) {
+                _radio.setFrequency(info.frequency);
+            }
+            break;
+        }
+    }
+}
+
+void PiCarMgr::tunerDown() {
+    // Implement tuner down logic
+    switch (_tuner_mode) {
+        case TUNE_ALL:
+            _radio.tuneDown();
+            break;
+            
+        case TUNE_KNOWN: {
+            station_info_t info;
+            if (nextKnownStation(_radio.mode(), _radio.frequency(), false, info)) {
+                _radio.setFrequency(info.frequency);
+            }
+            break;
+        }
+            
+        case TUNE_PRESETS: {
+            station_info_t info;
+            if (nextPresetStation(_radio.mode(), _radio.frequency(), false, info)) {
+                _radio.setFrequency(info.frequency);
+            }
+            break;
+        }
+    }
+}
+
+void PiCarMgr::toggleTunerMenu() {
+    // Implement tuner menu toggle logic
+    switch (_tuner_mode) {
+        case TUNE_ALL:
+            _tuner_mode = TUNE_KNOWN;
+            break;
+            
+        case TUNE_KNOWN:
+            _tuner_mode = TUNE_PRESETS;
+            break;
+            
+        case TUNE_PRESETS:
+            _tuner_mode = TUNE_ALL;
+            break;
+    }
+    displayRadioMenu();
+}
+ 
 void PiCarMgr::startControls( std::function<void(bool didSucceed, std::string error_text)> cb){
 	int  errnum = 0;
 	bool didSucceed = false;
@@ -3110,46 +3239,4 @@ bool PiCarMgr::setECUtime(  struct timespec ts){
  
 	return success;
 
-}
-
-void PiCarMgr::updateEncoders(){
-	
-	if(_isSetup){
-		
-		if(_volKnob){
-			bool clockwise = false;
-			
-			if(_volKnob->updateStatus()){
-				
-				if(_volKnob->wasMoved(clockwise)){
-					if(clockwise)
-						volumeUp();
-					else
-						volumeDown();
-				}
-				
-				if(_volKnob->wasClicked()){
-					toggleMute();
-				}
-			}
-		}
-		
-		if(_tunerKnob){
-			bool clockwise = false;
-			
-			if(_tunerKnob->updateStatus()){
-				
-				if(_tunerKnob->wasMoved(clockwise)){
-					if(clockwise)
-						tunerUp();
-					else
-						tunerDown();
-				}
-				
-				if(_tunerKnob->wasClicked()){
-					toggleTunerMenu();
-				}
-			}
-		}
-	}
 }

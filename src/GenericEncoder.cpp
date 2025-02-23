@@ -8,17 +8,27 @@ static uint64_t getCurrentTimeMillis() {
     return te.tv_sec * 1000LL + te.tv_usec / 1000;
 }
 
-GenericEncoder::GenericEncoder() {
+GenericEncoder::GenericEncoder(int clkPin, int dtPin, int swPin) {
     _isSetup = false;
     _antiBouncePeriod = 1;
     _doubleClickPeriod = 50;
     _wasClicked = false;
     _wasDoubleClicked = false;
     _wasMoved = false;
+    _clkPin = clkPin;
+    _dtPin = dtPin;
+    _swPin = swPin;
 }
 
 GenericEncoder::~GenericEncoder() {
     stop();
+}
+
+bool GenericEncoder::begin() {
+    if (_clkPin < 0 || _dtPin < 0 || _swPin < 0) {
+        return false;
+    }
+    return begin(_clkPin, _dtPin, _swPin);
 }
 
 bool GenericEncoder::begin(int clkPin, int dtPin, int swPin) {

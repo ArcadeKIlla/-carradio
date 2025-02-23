@@ -74,12 +74,12 @@ bool DuppaKnob::isConnected() {
 }
 
 bool DuppaKnob::updateStatus() {
-	uint8_t status = 0;
-	return _duppa.updateStatus(status);
-}
-
-bool DuppaKnob::updateStatus(uint8_t &statusOut) {
-	return _isSetup && _duppa.updateStatus(statusOut);
+    if (!_isSetup) {
+        return false;
+    }
+    uint8_t status = 0;
+    bool result = _duppa.updateStatus(status);
+    return result;
 }
 
 bool DuppaKnob::wasClicked(){
