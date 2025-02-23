@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string>
-
-class EncoderBase;
+#include "EncoderBase.hpp"
 
 class GenericEncoder : public EncoderBase {
 public:
