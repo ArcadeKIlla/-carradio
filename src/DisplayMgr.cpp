@@ -102,11 +102,38 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	_displayType = displayType;
 	_leftEncoderConfig = leftConfig;
 	_rightEncoderConfig = rightConfig;
-	_leftEncoder = nullptr;
-	_rightEncoder = nullptr;
-	_leftRing = nullptr;
-	_rightRing = nullptr;
-	_vfd = nullptr;
+
+	// Create display based on type
+	if (_displayType == VFD_DISPLAY) {
+		_vfd = new VFD();
+	} else {
+		_vfd = new SSD1306_VFD();
+	}
+
+	// Initialize encoders based on config
+	if (_leftEncoderConfig.type == DUPPA_ENCODER) {
+		_leftKnob = new DuppaKnob();
+		_leftRing = new DuppaLEDRing();
+		_leftEncoder = _leftKnob;
+	} else {
+		_leftKnob = nullptr;
+		_leftRing = nullptr;
+		_leftEncoder = new GenericEncoder(_leftEncoderConfig.generic.clkPin,
+										_leftEncoderConfig.generic.dtPin,
+										_leftEncoderConfig.generic.swPin);
+	}
+
+	if (_rightEncoderConfig.type == DUPPA_ENCODER) {
+		_rightKnob = new DuppaKnob();
+		_rightRing = new DuppaLEDRing();
+		_rightEncoder = _rightKnob;
+	} else {
+		_rightKnob = nullptr;
+		_rightRing = nullptr;
+		_rightEncoder = new GenericEncoder(_rightEncoderConfig.generic.clkPin,
+										 _rightEncoderConfig.generic.dtPin,
+										 _rightEncoderConfig.generic.swPin);
+	}
 
 	pthread_create(&_updateTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::DisplayUpdateThread, (void*)this);
@@ -124,12 +151,43 @@ DisplayMgr::~DisplayMgr(){
 	
 	stop();
 	
-	if(_vfd) {
+	if(_menuSliderCBInfo) free(_menuSliderCBInfo);
+	if(_menuSelectionSliderCBInfo) free(_menuSelectionSliderCBInfo);
+
+	// Clean up display
+	if (_vfd) {
 		delete _vfd;
 		_vfd = nullptr;
 	}
-	
+
+	// Clean up left encoder components
+	if (_leftKnob) {
+		delete _leftKnob;
+		_leftKnob = nullptr;
+	} else if (_leftEncoder) {
+		delete _leftEncoder;
+		_leftEncoder = nullptr;
+	}
+	if (_leftRing) {
+		delete _leftRing;
+		_leftRing = nullptr;
+	}
+
+	// Clean up right encoder components
+	if (_rightKnob) {
+		delete _rightKnob;
+		_rightKnob = nullptr;
+	} else if (_rightEncoder) {
+		delete _rightEncoder;
+		_rightEncoder = nullptr;
+	}
+	if (_rightRing) {
+		delete _rightRing;
+		_rightRing = nullptr;
+	}
+
 	pthread_mutex_destroy(&_mutex);
+	pthread_mutex_destroy(&_led_mutex);
 }
 
 bool DisplayMgr::begin(const char* path, speed_t speed) {
@@ -3419,7 +3477,7 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 		
 		string valStr =  truncate(_menuSelectionSliderCBInfo->choices[_menuSelectionSliderCBInfo->currentChoice],maxLen);
 		string portionOfSpaces = spaces.substr(0, (maxLen - valStr.size()) / 2);
-		valStr = portionOfSpaces + valStr + portionOfSpaces;
+		valStr = portionOfSpaces + valStr;
 		
 		_vfd->setFont(VFD::FONT_5x7);
 		_vfd->setCursor( 0, bottombox + 10);
@@ -4213,7 +4271,6 @@ void DisplayMgr::showWaypoints(string intitialUUID,
 	}
 	_wayPointCB = cb;
 	_menuTimeout = timeout;
-	
 	setEvent(EVT_PUSH, MODE_GPS_WAYPOINTS);
 }
 
@@ -4293,6 +4350,7 @@ bool DisplayMgr::processSelectorKnobActionForGPSWaypoints( knob_action_t action)
 				setEvent(EVT_REDRAW, _current_mode);
 			
 			wasHandled = true;
+			
 		}
 			break;
 			
