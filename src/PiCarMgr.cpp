@@ -1519,11 +1519,11 @@ void PiCarMgr::PiCarLoop(){
 					bool status_changed = false;
 					
 					uint8_t newstatus = 0;
-					volKnob->updateStatus(newstatus);
+					volKnob->updateStatus();
 					if(newstatus != volKnobStatus) status_changed = true;
 					volKnobStatus = newstatus;
 	
-					tunerKnob->updateStatus(newstatus);
+					tunerKnob->updateStatus();
 					if(newstatus != tunerKnobStatus) status_changed = true;
 					tunerKnobStatus = newstatus;
 	
@@ -1706,11 +1706,11 @@ void PiCarMgr::PiCarLoop(){
 					_audio.setMute(false);
 				
 				// change  volume
-				auto volume = _audio.volume();
+				double volume = _audio.volume();
 				
 				if(volMovedCW){
 					if(volume < 1) {						// twist up
-						volume +=.01;
+						volume += 0.1; // Increase by 10%
 						if(volume > 1) volume = 1.0;	// pin volume
 						_audio.setVolume(volume);
 						_db.updateValue(VAL_AUDIO_VOLUME, volume);
@@ -1718,7 +1718,7 @@ void PiCarMgr::PiCarLoop(){
 				}
 				else {
 					if(volume > 0) {							// twist down
-						volume -=.01;
+						volume -= 0.1; // Decrease by 10%
 						if(volume < 0) volume = 0.0;		// twist down
 						_audio.setVolume(volume);
 						_db.updateValue(VAL_AUDIO_VOLUME, volume);
@@ -2831,19 +2831,21 @@ void PiCarMgr::updateEncoders(){
 
 void PiCarMgr::volumeUp() {
     // Implement volume up logic
-    _audio.volumeUp();
+    double vol = _audio.volume();
+    _audio.setVolume(vol + 0.1); // Increase by 10%
     showVolumeChange();
 }
 
 void PiCarMgr::volumeDown() {
     // Implement volume down logic
-    _audio.volumeDown();
+    double vol = _audio.volume();
+    _audio.setVolume(vol - 0.1); // Decrease by 10%
     showVolumeChange();
 }
 
 void PiCarMgr::toggleMute() {
     // Implement mute toggle logic
-    _audio.toggleMute();
+    _audio.setMute(!_audio.isMuted());
     showVolumeChange();
 }
 
@@ -2851,21 +2853,27 @@ void PiCarMgr::tunerUp() {
     // Implement tuner up logic
     switch (_tuner_mode) {
         case TUNE_ALL:
-            _radio.tuneUp();
+            _radio.nextFrequency(true);
             break;
             
         case TUNE_KNOWN: {
             station_info_t info;
-            if (nextKnownStation(_radio.mode(), _radio.frequency(), true, info)) {
-                _radio.setFrequency(info.frequency);
+            radio_mode_t mode;
+            uint32_t freq;
+            if (_radio.queueGetFrequencyandMode(mode, freq) && 
+                nextKnownStation(mode, freq, true, info)) {
+                _radio.setFrequencyandMode(mode, info.frequency);
             }
             break;
         }
             
         case TUNE_PRESETS: {
             station_info_t info;
-            if (nextPresetStation(_radio.mode(), _radio.frequency(), true, info)) {
-                _radio.setFrequency(info.frequency);
+            radio_mode_t mode;
+            uint32_t freq;
+            if (_radio.queueGetFrequencyandMode(mode, freq) && 
+                nextPresetStation(mode, freq, true, info)) {
+                _radio.setFrequencyandMode(mode, info.frequency);
             }
             break;
         }
@@ -2876,21 +2884,27 @@ void PiCarMgr::tunerDown() {
     // Implement tuner down logic
     switch (_tuner_mode) {
         case TUNE_ALL:
-            _radio.tuneDown();
+            _radio.nextFrequency(false);
             break;
             
         case TUNE_KNOWN: {
             station_info_t info;
-            if (nextKnownStation(_radio.mode(), _radio.frequency(), false, info)) {
-                _radio.setFrequency(info.frequency);
+            radio_mode_t mode;
+            uint32_t freq;
+            if (_radio.queueGetFrequencyandMode(mode, freq) && 
+                nextKnownStation(mode, freq, false, info)) {
+                _radio.setFrequencyandMode(mode, info.frequency);
             }
             break;
         }
             
         case TUNE_PRESETS: {
             station_info_t info;
-            if (nextPresetStation(_radio.mode(), _radio.frequency(), false, info)) {
-                _radio.setFrequency(info.frequency);
+            radio_mode_t mode;
+            uint32_t freq;
+            if (_radio.queueGetFrequencyandMode(mode, freq) && 
+                nextPresetStation(mode, freq, false, info)) {
+                _radio.setFrequencyandMode(mode, info.frequency);
             }
             break;
         }
