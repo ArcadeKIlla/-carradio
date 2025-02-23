@@ -16,6 +16,7 @@ DuppaKnob::DuppaKnob(){
 	_isSetup = false;
 	_currentColor = RGB::Black;
 	_brightness = 1.0;
+	_deviceAddress = -1;
  }
 
 DuppaKnob::~DuppaKnob(){
@@ -23,15 +24,23 @@ DuppaKnob::~DuppaKnob(){
 }
 
 
+bool DuppaKnob::begin() {
+	if (_deviceAddress < 0) {
+		return false;
+	}
+	return begin(_deviceAddress);
+}
+
 bool DuppaKnob::begin(int deviceAddress){
 	int error = 0;
-
 	return begin(deviceAddress, error);
 }
 
  
 bool DuppaKnob::begin(int deviceAddress, int &error){
 	bool status = false;
+
+	_deviceAddress = deviceAddress;
 
 	uint8_t config = DuppaEncoder::INT_DATA
 	| DuppaEncoder::WRAP_DISABLE
