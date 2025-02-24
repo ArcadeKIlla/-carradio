@@ -68,7 +68,7 @@ public:
 	bool begin(const char* path, speed_t speed, int &error);
 	void stop();
 
-	 bool reset();
+	bool reset();
 		
 	// LED effects
 	void LEDeventStartup();
@@ -506,4 +506,5 @@ private:
     RGB _leftKnobColor;
     double _dimLevel;       // 0.0 = off ,  1.0  = full on.
     bool _backlightKnobs;
+    bool _hasLEDs;  // Flag to track if LED functionality is enabled
 };

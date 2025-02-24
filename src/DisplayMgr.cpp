@@ -103,6 +103,7 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	_displayType = displayType;
 	_leftEncoderConfig = leftConfig;
 	_rightEncoderConfig = rightConfig;
+	_hasLEDs = false;  // Initialize LED flag
 
 	// Create display based on type
 	if (_displayType == VFD_DISPLAY) {
@@ -116,6 +117,7 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 		_leftKnob = new DuppaKnob();
 		_leftRing = new DuppaLEDRing();
 		_leftEncoder = _leftKnob;  // Safe now that DuppaKnob inherits from EncoderBase
+		_hasLEDs = true;  // We have LED functionality
 	} else {
 		_leftKnob = nullptr;
 		_leftRing = nullptr;
@@ -129,6 +131,7 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 		_rightKnob = new DuppaKnob();
 		_rightRing = new DuppaLEDRing();
 		_rightEncoder = _rightKnob;  // Safe now that DuppaKnob inherits from EncoderBase
+		_hasLEDs = true;  // We have LED functionality
 	} else {
 		_rightKnob = nullptr;
 		_rightRing = nullptr;
@@ -140,8 +143,11 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	pthread_create(&_updateTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::DisplayUpdateThread, (void*)this);
 	
-	pthread_create(&_ledUpdateTID, NULL,
-						(THREADFUNCPTR) &DisplayMgr::LEDUpdateThread, (void*)this);
+	// Only create LED thread if we have LED functionality
+	if (_hasLEDs) {
+		pthread_create(&_ledUpdateTID, NULL,
+							(THREADFUNCPTR) &DisplayMgr::LEDUpdateThread, (void*)this);
+	}
 	
 	pthread_create(&_metaReaderTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::MetaDataReaderThread, (void*)this);
@@ -206,92 +212,18 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         throw Exception("failed to setup VFD");
     }
     printf("DisplayMgr: VFD initialization successful\n");
-	
-    // Initialize each I2C device with detailed logging
-    printf("DisplayMgr: Initializing LED rings and knobs...\n");
     
-    bool hasLEDs = true;  // Track if LED devices are available
-    
-    if(!_rightRing->begin(rightRingAddress, error)) {
-        printf("WARNING: Right LED ring initialization failed at address 0x%02X with error %d\n", rightRingAddress, error);
-        hasLEDs = false;
+    // Initialize I2C devices only if we're using them
+    if (_hasLEDs) {
+        printf("DisplayMgr: Initializing I2C LED rings and knobs\n");
+        // Add any I2C initialization code here if needed
     } else {
-        printf("DisplayMgr: Right LED ring initialized successfully\n");
+        printf("DisplayMgr: Using regular rotary encoders - skipping I2C LED initialization\n");
     }
     
-    if(!_leftRing->begin(leftRingAddress, error)) {
-        printf("WARNING: Left LED ring initialization failed at address 0x%02X with error %d\n", leftRingAddress, error);
-        hasLEDs = false;
-    } else {
-        printf("DisplayMgr: Left LED ring initialized successfully\n");
-    }
-    
-    if(!_rightKnob->begin(rightKnobAddress, error)) {
-        printf("WARNING: Right knob initialization failed at address 0x%02X with error %d\n", rightKnobAddress, error);
-        hasLEDs = false;
-    } else {
-        printf("DisplayMgr: Right knob initialized successfully\n");
-    }
-    
-    if(!_leftKnob->begin(leftKnobAddress, error)) {
-        printf("WARNING: Left knob initialization failed at address 0x%02X with error %d\n", leftKnobAddress, error);
-        hasLEDs = false;
-    } else {
-        printf("DisplayMgr: Left knob initialized successfully\n");
-    }
-	
-    // Only configure LED devices if they initialized successfully
-    if(hasLEDs) {
-        // flip the ring numbers
-        printf("DisplayMgr: Configuring LED ring offsets...\n");
-        _rightRing->setOffset(14,true);
-        _leftRing->setOffset(14, true);		// slight offset for volume control of zero
-        
-        printf("DisplayMgr: Resetting and clearing devices...\n");
-        bool resetSuccess = _vfd->reset() && _rightRing->reset() && _leftRing->reset() 
-                           && _rightRing->clearAll() && _leftRing->clearAll();
-        
-        if(!resetSuccess) {
-            printf("WARNING: Failed to reset and clear LED devices\n");
-            hasLEDs = false;
-        }
-    } else {
-        printf("WARNING: LED devices not available - continuing without LED functionality\n");
-    }
-	
     _isSetup = true;
-	
+    
     if(_isSetup) {
-        if(hasLEDs) {
-            printf("DisplayMgr: Configuring knob parameters...\n");
-            
-            _rightKnob->setAntiBounce(antiBounceDefault);
-            _leftKnob->setAntiBounce(antiBounceDefault);
-            
-            _rightKnob->setDoubleClickTime(doubleClickTime);
-            _leftKnob->setDoubleClickTime(doubleClickTime);
-            
-            _leftRing->reset();
-            _rightRing->reset();
-            
-            // Set for normal operation
-            printf("DisplayMgr: Setting LED ring configurations...\n");
-            _rightRing->setConfig(0x01);
-            _leftRing->setConfig(0x01);
-            
-            // full scaling -- control current with global curent
-            _rightRing->SetScaling(0xFF);
-            _leftRing->SetScaling(0xFF);
-            
-            // set full bright
-            _rightRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
-            _leftRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
-            
-            // clear all values
-            _rightRing->clearAll();
-            _leftRing->clearAll();
-        }
-        
         _eventQueue = {};
         _ledEvent = 0;
         
@@ -305,9 +237,9 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         showStartup();
         
         printf("DisplayMgr: Initialization completed successfully%s\n", 
-               hasLEDs ? "" : " (without LED functionality)");
+               _hasLEDs ? " with LED functionality" : " without LED functionality");
     }
-	
+    
     return _isSetup;
 }
 
@@ -320,7 +252,7 @@ void DisplayMgr::stop(){
 	pthread_join(_updateTID, NULL);
 	
 	pthread_cond_signal(&_led_cond);
-	pthread_join(_ledUpdateTID, NULL);
+	if(_hasLEDs) pthread_join(_ledUpdateTID, NULL);
 	
 	pthread_join(_metaReaderTID, NULL);
 	
@@ -359,412 +291,87 @@ void DisplayMgr::stop(){
 // MARK: -  LED Events
 
 void DisplayMgr::LEDeventStartup(){
-	ledEventSet(LED_EVENT_STARTUP, LED_EVENT_ALL);
+	if (!_hasLEDs) return;
+	ledEventSet(LED_EVENT_STARTUP, 0);
 }
 
 void DisplayMgr::LEDeventVol(){
-	ledEventSet(LED_EVENT_VOL,0);
+	if (!_hasLEDs) return;
+	ledEventSet(LED_EVENT_VOL, 0);
 }
 
 void DisplayMgr::LEDeventMute(){
-	ledEventSet(LED_EVENT_MUTE,0);
+	if (!_hasLEDs) return;
+	ledEventSet(LED_EVENT_MUTE, 0);
 }
 
 void DisplayMgr::LEDeventStop(){
-	ledEventSet(LED_EVENT_STOP,LED_EVENT_ALL);
+	if (!_hasLEDs) return;
+	ledEventSet(0, LED_EVENT_ALL);
 }
 
-
 void DisplayMgr::LEDeventScannerStep(){
-	ledEventSet(LED_EVENT_SCAN_STEP,0);
+	if (!_hasLEDs) return;
+	ledEventSet(LED_EVENT_SCANNER_STEP, 0);
 }
 
 void DisplayMgr::LEDeventScannerHold(){
-	ledEventSet(LED_EVENT_SCAN_HOLD,0);
+	if (!_hasLEDs) return;
+	ledEventSet(LED_EVENT_SCANNER_HOLD, 0);
 }
 
 void DisplayMgr::LEDeventScannerStop(){
-	ledEventSet(LED_EVENT_SCAN_STOP,0);
+	if (!_hasLEDs) return;
+	ledEventSet(0, LED_EVENT_SCANNER_ALL);
 }
 
 void DisplayMgr::LEDTunerUp (bool pinned){
+	if (!_hasLEDs) return;
 	ledEventSet(pinned?LED_EVENT_TUNE_UP_PIN: LED_EVENT_TUNE_UP ,0);
 }
 
 void DisplayMgr::LEDTunerDown (bool pinned){
+	if (!_hasLEDs) return;
 	ledEventSet(pinned?LED_EVENT_TUNE_DOWN_PIN: LED_EVENT_TUNE_DOWN,0);
 }
 
 void DisplayMgr::runLEDEventStartup(){
-	
-	static uint8_t 	ledStep = 0;
-	
-	if( _ledEvent & LED_EVENT_STARTUP ){
-		ledEventSet(LED_EVENT_STARTUP_RUNNING,LED_EVENT_ALL );
-		
-		ledStep = 0;
-		_leftRing->clearAll();
-		_rightRing->clearAll();
-	}
-	else if( _ledEvent & LED_EVENT_STARTUP_RUNNING ){
-		if(ledStep < 24 ){
-			
-			DuppaLEDRing::led_block_t data = {{0,0,0}};
-			data[mod(++ledStep, 24)] = {255,255,255};
-			_leftRing->setLEDs(data);
-			_rightRing->setLEDs(data);
-		}
-		else {
-			ledEventSet(0, LED_EVENT_STARTUP_RUNNING);
-			_leftRing->clearAll();
-			_rightRing->clearAll();
-		}
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
-
 
 void DisplayMgr::runLEDEventMute(){
-	
-	static timespec		lastEvent = {0,0};
-	static bool blinkOn = false;
-	AudioOutput*		audio 	= PiCarMgr::shared()->audio();
-	
-	if( _ledEvent & LED_EVENT_MUTE ){
-		lastEvent = {0,0};
-		blinkOn = false;
-		ledEventSet(LED_EVENT_MUTE_RUNNING, LED_EVENT_MUTE);
-	}
-	
-	// do the first cycle right away
-	if( _ledEvent & LED_EVENT_MUTE_RUNNING ){
-		
-		struct timespec now, diff;
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		diff = timespec_sub(now, lastEvent);
-		
-		uint64_t diff_millis = timespec_to_ms(diff);
-		
-		if(diff_millis >= 500 ){ // 2Hz
-			clock_gettime(CLOCK_MONOTONIC, &lastEvent);
-			
-			blinkOn = !blinkOn;
-			
-			if(blinkOn){
-				
-				float volume =  audio->mutedVolume();
-				// muted LED scales between 1 and 24
-				int ledvol = volume*23;
-				for (int i = 0 ; i < 24; i++)
-					_leftRing->setGREEN(i, i <= ledvol?0xff:0 );
-				
-			}
-			else {
-				_leftRing->clearAll();
-			}
-		}
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
-
 
 void DisplayMgr::runLEDEventVol(){
-	
-	static timespec		startedEvent = {0,0};
-	AudioOutput*		audio 	= PiCarMgr::shared()->audio();
-	
-	bool setVolume = false;
-	if( _ledEvent & LED_EVENT_VOL ){
-		
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		ledEventSet(LED_EVENT_VOL_RUNNING, LED_EVENT_VOL | LED_EVENT_MUTE_RUNNING );
-		setVolume = true;
-	}
-	
-	if( _ledEvent & LED_EVENT_VOL_RUNNING ){
-		
-		struct timespec now;
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		
-		int64_t diff = timespec_to_ms(timespec_sub(now,startedEvent));
-		if(setVolume){
-			float volume =  audio->volume();
-			// volume LED scales between 1 and 24
-			int ledvol = volume*23;
-			
-			for (int i = 0 ; i < 24; i++) {
-				_leftRing->setGREEN(i, i <= ledvol?0xff:0 );
-			}
-			
-		}
-		else if(diff > 800){
-			ledEventSet(0, LED_EVENT_VOL_RUNNING);
-			
-			// scan the LEDS off
-			for (int i = 0; i < 24; i++) {
-				_leftRing->setColor( i, 0, 0, 0);
-			}
-		}
-		
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
-
 
 void DisplayMgr::runLEDEventScanner(){
-	
-	static uint8_t 	ledStep = 0;
-	static bool			inScannerMode = false;
-	
-	// did we enter scanner mode?
-	if((_ledEvent & (LED_EVENT_SCAN_STEP | LED_EVENT_SCAN_HOLD)) &&  !inScannerMode){
-		// run scannerMode intro animation
-		_rightRing->clearAll();
-		
-		// scan the LEDS off
-		for (int i = 0; i < 24; i++) {
-			
-			_rightRing->setColor( i, 255, 0, 0);
-			usleep(5000);
-			_rightRing->setColor( i, 0, 0, 0);
-		}
-		usleep(10000);
-		inScannerMode = true;
-	}
-	
-	if( _ledEvent & LED_EVENT_SCAN_STEP ){
-		
-		//	printf("SCAN STEP: %d %08x\n",ledStep, _ledEvent);
-		
-		// arew we already in a a scan sequence?
-		if( _ledEvent & LED_EVENT_SCAN_RUNNING ){
-		}
-		else {
-			ledStep = 0;
-			_rightRing->clearAll();
-		}
-		
-		
-		DuppaLEDRing::led_block_t data = {{0,0,0}};
-		data[ledStep] = {255,0,0};
-		_rightRing->setLEDs(data);
-		ledStep = mod(ledStep+1, 24);
-		ledEventSet(LED_EVENT_SCAN_RUNNING, LED_EVENT_SCAN_STEP);
-	}
-	
-	else 	if( _ledEvent & LED_EVENT_SCAN_HOLD ){
-		
-		//		printf("SCAN HOLD: %d %08x\n",ledStep, _ledEvent);
-		inScannerMode = true;
-		
-		DuppaLEDRing::led_block_t data = {{0,0,0}};
-		data[ledStep] = {0,255,0};
-		_rightRing->setLEDs(data);
-		ledEventSet(LED_EVENT_SCAN_RUNNING, LED_EVENT_SCAN_HOLD);
-	}
-	else 	if( _ledEvent & LED_EVENT_SCAN_STOP ){
-		
-		//		printf("SCAN STOP:%08x\n", _ledEvent);
-		inScannerMode = false;
-		
-		ledEventSet(0, LED_EVENT_SCAN_RUNNING | LED_EVENT_SCAN_STOP | LED_EVENT_SCAN_HOLD );
-		_rightRing->clearAll();
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
-
 
 void DisplayMgr::runLEDEventTuner(){
-	
-	static timespec		startedEvent = {0,0};
-	
-	static uint8_t 		offset =  0;
-	bool didChange = false;
-	bool didPin = false;
-	
-	
-	if( _ledEvent & LED_EVENT_TUNE_UP ){
-		offset = mod(++offset, 24);
-		didChange = true;
-		//		printf("LED_EVENT_TUNE_UP:  %08x\n" ,_ledEvent);
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		ledEventSet(LED_EVENT_TUNE_RUNNING, LED_EVENT_TUNE_UP  );
-	}
-	else if( _ledEvent & LED_EVENT_TUNE_DOWN ){
-		offset = mod(--offset, 24);
-		didChange = true;
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		//		printf("LED_EVENT_TUNE_DOWN:  %08x\n" ,_ledEvent);
-		ledEventSet(LED_EVENT_TUNE_RUNNING, LED_EVENT_TUNE_DOWN  );
-	}
-	else if( _ledEvent & LED_EVENT_TUNE_UP_PIN ){
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		
-		didPin = true;
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		ledEventSet(LED_EVENT_TUNE_RUNNING, LED_EVENT_TUNE_UP_PIN  );
-		
-	}
-	else if( _ledEvent & LED_EVENT_TUNE_DOWN_PIN ){
-		
-		didPin = true;
-		clock_gettime(CLOCK_MONOTONIC, &startedEvent);
-		ledEventSet(LED_EVENT_TUNE_RUNNING, LED_EVENT_TUNE_DOWN_PIN  );
-	}
-	
-	if(didPin) {
-		for (int i = 0 ; i < 24; i++) {
-			if( i == offset){
-				_rightRing->setColor(i, 16, 16, 16);
-			}
-			else {
-				_rightRing->setColor(i, 0, 0, 0);
-			}
-		}
-	}
-	else if(didChange){
-		for (int i = 0 ; i < 24; i++) {
-			uint8_t off1 =  mod(offset-1, 24);
-			uint8_t off2 =  mod(offset+1, 24);
-			
-			if( i == offset){
-				_rightRing->setColor(i, 0, 0, 255);
-			}
-			else if(i == off1) {
-				_rightRing->setColor(i, 16, 16, 16);
-			}
-			else if(i == off2) {
-				_rightRing->setColor(i, 16, 16, 16);
-			}
-			else {
-				_rightRing->setColor(i, 0, 0, 0);
-			}
-		}
-	}
-	
-	if( _ledEvent & LED_EVENT_TUNE_RUNNING ){
-		
-		struct timespec now;
-		clock_gettime(CLOCK_MONOTONIC, &now);
-		
-		int64_t diff = timespec_to_ms(timespec_sub(now,startedEvent));
-		
-		if(diff > 800){
-			ledEventSet(0, LED_EVENT_TUNE_RUNNING);
-			
-			//			printf("LED_EVENT_TUNE_OFF  %08x\n" ,_ledEvent);
-			
-			// scan the LEDS off
-			for (int i = 0; i < 24; i++) {
-				_rightRing->setColor( i, 0, 0, 0);
-			}
-		}
-		
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
-
 
 void DisplayMgr::ledEventSet(uint64_t set, uint64_t reset){
-	
-	pthread_mutex_lock (&_led_mutex);
-	_ledEvent &= ~reset;
-	_ledEvent |= set;
-	
-	// 	printf("ledEventSet %08x %08x = %08x\n",set,reset,_ledEvent);
-	
-	pthread_mutex_unlock (&_led_mutex);
-	// only signal if you are setting a flag
-	if((set & LED_EVENT_MASK) != 0)
-		pthread_cond_signal(&_led_cond);
-}
-void DisplayMgr::LEDUpdateLoop(){
-	
-	//	printf("start LEDUpdateLoop\n");
-	PRINT_CLASS_TID;
-	
-	pthread_condattr_t attr;
-	pthread_condattr_init( &attr);
-#if !defined(__APPLE__)
-	//pthread_condattr_setclock is not supported on macOS
-	pthread_condattr_setclock( &attr, TIMEDWAIT_CLOCK);
-#endif
-	pthread_cond_init( &_led_cond, &attr);
-	
-	while(_isRunning){
-		
-		// if not setup // check back later
-		if(!_isSetup){
-			sleep(1);
-			continue;
-		}
-		
-		// Skip LED updates if no LED rings are present
-		if (!_leftRing && !_rightRing) continue;
-		
-		pthread_mutex_lock (&_led_mutex);
-		
-		// wait for event.
-		
-		while((_ledEvent & LED_EVENT_MASK) == 0){
-			
-			// delay for half second
-			struct timespec ts = {0, 0};
-			struct timespec now = {0, 0};
-			clock_gettime(TIMEDWAIT_CLOCK, &now);
-			
-			long delay = 1000;
-			
-			if( _ledEvent & LED_STATUS_MASK)
-				delay = 100;
-			
-			ts = timespec_add(now, timespec_from_ms(delay));
-			// wait for _led_cond or time delay == ETIMEDOUT
-			
-			int result = pthread_cond_timedwait(&_led_cond, &_led_mutex, &ts);
-			if(result){
-				if(result != ETIMEDOUT){
-					printf( "LEDUpdateLoop: pthread_cond_timedwait : %s\n", strerror(result));
-				}
-				
-#if 0
-				// debugging how pthread_cond_timedwait works
-				struct timespec ts1 = {0, 0};
-				clock_gettime(TIMEDWAIT_CLOCK, &ts1);
-				printf("LEDUpdateLoop:  pthread_cond_timedwait delay = %ld\n",
-						 timespec_to_ms(timespec_sub(ts1, now)));
-				
-#endif
-				
-				break;
-			}
-		}
-		
-		uint64_t theLedEvent =  _ledEvent;
-		pthread_mutex_unlock (&_led_mutex);
-		
-		// run the LED effects
-		
-		if( theLedEvent & (LED_EVENT_STOP)){
-			ledEventSet(0, LED_EVENT_STOP);
-			_leftRing->clearAll();
-			_rightRing->clearAll();
-		}
-		
-		if( theLedEvent & (LED_EVENT_STARTUP | LED_EVENT_STARTUP_RUNNING))
-			runLEDEventStartup();
-		
-		if( theLedEvent & (LED_EVENT_VOL | LED_EVENT_VOL_RUNNING))
-			runLEDEventVol();
-		
-		if( theLedEvent & (LED_EVENT_MUTE | LED_EVENT_MUTE_RUNNING))
-			runLEDEventMute();
-		
-		if( theLedEvent & (LED_EVENT_SCAN_STEP | LED_EVENT_SCAN_HOLD | LED_EVENT_SCAN_STOP))
-			runLEDEventScanner();
-		
-		if( theLedEvent & (LED_EVENT_TUNE_UP | LED_EVENT_TUNE_DOWN
-								 | LED_EVENT_TUNE_UP_PIN | LED_EVENT_TUNE_DOWN_PIN
-								 | LED_EVENT_TUNE_RUNNING))
-			runLEDEventTuner();
-	}
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
 }
 
+void DisplayMgr::LEDUpdateLoop(){
+	if (!_hasLEDs) return;
+	// No-op when not using LED rings
+	while(_isRunning) {
+		usleep(100000);  // Sleep to avoid busy loop
+	}
+}
 
 void* DisplayMgr::LEDUpdateThread(void *context){
 	DisplayMgr* d = (DisplayMgr*)context;
@@ -780,10 +387,9 @@ void* DisplayMgr::LEDUpdateThread(void *context){
 	return((void *)1);
 }
 
-
 void DisplayMgr::LEDUpdateThreadCleanup(void *context){
+	// No-op when not using LED rings
 }
-
 
 // MARK: -  display tools
 
@@ -800,24 +406,13 @@ static uint8_t calculateRingCurrent(uint8_t level) {
 	
 }
 
-
 bool DisplayMgr::setBrightness(double level) {
-	
+	if (!_hasLEDs) return true;
 	if(_isSetup){
 		_dimLevel = level;
 		
 		if(_vfd) {
 			_vfd->setBrightness(level);
-		}
-		
-		if(_leftRing) {
-			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
-			_leftRing->SetGlobalCurrent(ringLevel);
-		}
-		
-		if(_rightRing) {
-			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
-			_rightRing->SetGlobalCurrent(ringLevel);
 		}
 	}
 	
@@ -825,58 +420,14 @@ bool DisplayMgr::setBrightness(double level) {
 }
 
 bool DisplayMgr::setKnobBackLight(bool isOn){
-    if(!_isSetup) return false;
-    
-    _backlightKnobs = isOn;
-    
-    if(_leftRing) {
-        if(isOn)
-            for(uint8_t i = 0; i < 24; i++) {
-                _leftRing->setColor(i, _leftKnobColor);
-            }
-        else
-            for(uint8_t i = 0; i < 24; i++) {
-                _leftRing->setColor(i, RGB());
-            }
-    }
-    
-    if(_rightRing) {
-        if(isOn)
-            for(uint8_t i = 0; i < 24; i++) {
-                _rightRing->setColor(i, _rightKnobColor);
-            }
-        else
-            for(uint8_t i = 0; i < 24; i++) {
-                _rightRing->setColor(i, RGB());
-            }
-    }
-    
+	if (!_hasLEDs) return true;
+    // No-op when not using LED rings
     return true;
 }
 
 bool DisplayMgr::setKnobColor(knob_id_t knob, RGB color){
-    if(!_isSetup) return false;
-    
-    switch(knob) {
-        case KNOB_RIGHT:
-            _rightKnobColor = color;
-            if(_rightRing && _backlightKnobs) {
-                for(uint8_t i = 0; i < 24; i++) {
-                    _rightRing->setColor(i, color);
-                }
-            }
-            break;
-            
-        case KNOB_LEFT:
-            _leftKnobColor = color;
-            if(_leftRing && _backlightKnobs) {
-                for(uint8_t i = 0; i < 24; i++) {
-                    _leftRing->setColor(i, color);
-                }
-            }
-            break;
-    }
-    
+	if (!_hasLEDs) return true;
+    // No-op when not using LED rings
     return true;
 }
 
@@ -2133,8 +1684,8 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					
 					uint8_t buff2[] = {
 						VFD::VFD_CLEAR_AREA,
-						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY-16),
-						static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+4)};
+						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY+9),
+						static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+19)};
 					_vfd->writePacket(buff2, sizeof(buff2));
 					
 					string str = "- NOT PLAYING -";
