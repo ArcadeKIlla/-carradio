@@ -3515,7 +3515,33 @@ void DisplayMgr::drawSelectSliderScreen(modeTransition_t transition){
 		_vfd->write(valStr);
 	}
 }
- 
+
+// MARK: -  Slider Screen
+void DisplayMgr::showSliderScreen(
+                                         string title,
+                                         string right_text,
+                                         string left_text,
+                                         time_t timeout,
+                                         menuSliderGetterCallBack_t getterCB,
+                                         menuSliderSetterCallBack_t setterCB,
+                                         boolCallback_t doneCB) {
+        
+        if(_menuSliderCBInfo) free(_menuSliderCBInfo);
+        menuSliderCBInfo_t * cbInfo = (menuSliderCBInfo_t *) malloc(sizeof(menuSliderCBInfo_t));
+        memset(cbInfo, 0, sizeof(menuSliderCBInfo_t));
+        
+        cbInfo->title = title;
+        cbInfo->right_text = right_text;
+        cbInfo->left_text = left_text;
+        cbInfo->timeout = timeout?timeout:5;  // default 5 secs
+        cbInfo->getCB = getterCB;
+        cbInfo->setCB = setterCB;
+        cbInfo->doneCB = doneCB;
+        
+        _menuSliderCBInfo = cbInfo;
+        
+        setEvent(EVT_PUSH, MODE_SLIDER);
+} 
 
 void DisplayMgr::drawSliderScreen(modeTransition_t transition){
 	
