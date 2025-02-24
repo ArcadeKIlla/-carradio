@@ -106,7 +106,7 @@ int main(int argc, const char * argv[]) {
         // Continue anyway - the app should work without Airplay
     }
 	
-    PiCarMgr* pican 	= PiCarMgr::shared();
+    PiCarMgr* pican = PiCarMgr::shared();
 		
     // annoying log messages in librtlsdr
     freopen( "/dev/null", "w", stderr );
@@ -120,31 +120,17 @@ int main(int argc, const char * argv[]) {
 		
     bool firstrun = true;
     while(true) {
-			
         if(firstrun){
             sleep(1);
 #if defined(__APPLE__)
-				
-            // 			pican->stop();
-            //
             pican->audio()->setVolume(.5);
-				
             pican->radio()->setFrequencyandMode(RadioMgr::BROADCAST_FM, 101.900e6);
-            //			pican->radio()->setFrequencyandMode(RadioMgr::VHF, 154455008);
             pican->radio()->setON(true);
-            //			pican->saveRadioSettings();
-				
-            //			pican->radio()->setON(false);
-				
             firstrun = false;
 #endif
             continue;
         }
-			
         sleep(1);
-			
     }
-    exit(0);
-		
+    return 0;
 }
-return 0;

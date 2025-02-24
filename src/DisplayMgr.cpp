@@ -803,8 +803,6 @@ static uint8_t calculateRingCurrent(uint8_t level) {
 
 bool DisplayMgr::setBrightness(double level) {
 	
-	bool success = false;
-	
 	if(_isSetup){
 		_dimLevel = level;
 		
@@ -821,7 +819,6 @@ bool DisplayMgr::setBrightness(double level) {
 			uint8_t ringLevel = calculateRingCurrent((uint8_t)(level * 255));
 			_rightRing->SetGlobalCurrent(ringLevel);
 		}
-		
 	}
 	
 	return true;
@@ -3926,6 +3923,7 @@ void DisplayMgr::drawDTCScreen(modeTransition_t transition){
 				firstLine = lines.size()-1;
 				lines.push_back("[ ERASE ALL CODES? ]");
 				lines.push_back("  EXIT  ");
+				_lineOffset = totalCodes + 1;
 			}
 			else {
 				firstLine = lines.size()-1;
