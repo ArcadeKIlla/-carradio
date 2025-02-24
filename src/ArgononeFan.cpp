@@ -44,9 +44,9 @@ bool ArgononeFan::begin(int &error){
  
 	_shm_fd =  shm_open(SHM_FILE, O_RDWR, 0664);
 	if(_shm_fd == -1){
-		ELOG_ERROR(ErrorMgr::FAC_DEVICE, 0, 0,  "FAN Shared memory open failed %s",SHM_FILE);
+		printf("WARNING: Fan shared memory open failed %s - continuing without fan control\n", SHM_FILE);
 		_state = INS_UNKNOWN;
-		return false;
+		return true;  
 	}
 	
 	ftruncate(_shm_fd, SHM_SIZE);
