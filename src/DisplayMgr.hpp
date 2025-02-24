@@ -34,6 +34,10 @@ using namespace std;
 class DisplayMgr {
 	
 public:
+	// LED event constants
+	static const uint32_t LED_EVENT_SCAN_STEP = 0x01;
+	static const uint32_t LED_EVENT_SCAN_HOLD = 0x02;
+	static const uint32_t LED_EVENT_SCAN_MASK = 0x03;
 
 	enum DisplayType {
 		VFD_DISPLAY,
