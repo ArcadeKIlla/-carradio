@@ -312,17 +312,17 @@ void DisplayMgr::LEDeventStop(){
 
 void DisplayMgr::LEDeventScannerStep(){
 	if (!_hasLEDs) return;
-	ledEventSet(LED_EVENT_SCANNER_STEP, 0);
+	ledEventSet(LED_EVENT_SCAN_STEP, 0);
 }
 
 void DisplayMgr::LEDeventScannerHold(){
 	if (!_hasLEDs) return;
-	ledEventSet(LED_EVENT_SCANNER_HOLD, 0);
+	ledEventSet(LED_EVENT_SCAN_HOLD, 0);
 }
 
 void DisplayMgr::LEDeventScannerStop(){
 	if (!_hasLEDs) return;
-	ledEventSet(0, LED_EVENT_SCANNER_ALL);
+	ledEventSet(0, LED_EVENT_SCAN_MASK);
 }
 
 void DisplayMgr::LEDTunerUp (bool pinned){
@@ -404,7 +404,7 @@ static uint8_t calculateRingCurrent(uint8_t level) {
 	
 	return current;
 	
-}
+};
 
 bool DisplayMgr::setBrightness(double level) {
 	if (!_hasLEDs) return true;
