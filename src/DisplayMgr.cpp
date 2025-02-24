@@ -210,91 +210,105 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     // Initialize each I2C device with detailed logging
     printf("DisplayMgr: Initializing LED rings and knobs...\n");
     
+    bool hasLEDs = true;  // Track if LED devices are available
+    
     if(!_rightRing->begin(rightRingAddress, error)) {
-        printf("ERROR: Right LED ring initialization failed at address 0x%02X with error %d\n", rightRingAddress, error);
-        throw Exception("failed to setup right LED ring");
+        printf("WARNING: Right LED ring initialization failed at address 0x%02X with error %d\n", rightRingAddress, error);
+        hasLEDs = false;
+    } else {
+        printf("DisplayMgr: Right LED ring initialized successfully\n");
     }
-    printf("DisplayMgr: Right LED ring initialized successfully\n");
     
     if(!_leftRing->begin(leftRingAddress, error)) {
-        printf("ERROR: Left LED ring initialization failed at address 0x%02X with error %d\n", leftRingAddress, error);
-        throw Exception("failed to setup left LED ring");
+        printf("WARNING: Left LED ring initialization failed at address 0x%02X with error %d\n", leftRingAddress, error);
+        hasLEDs = false;
+    } else {
+        printf("DisplayMgr: Left LED ring initialized successfully\n");
     }
-    printf("DisplayMgr: Left LED ring initialized successfully\n");
     
     if(!_rightKnob->begin(rightKnobAddress, error)) {
-        printf("ERROR: Right knob initialization failed at address 0x%02X with error %d\n", rightKnobAddress, error);
-        throw Exception("failed to setup right knob");
+        printf("WARNING: Right knob initialization failed at address 0x%02X with error %d\n", rightKnobAddress, error);
+        hasLEDs = false;
+    } else {
+        printf("DisplayMgr: Right knob initialized successfully\n");
     }
-    printf("DisplayMgr: Right knob initialized successfully\n");
     
     if(!_leftKnob->begin(leftKnobAddress, error)) {
-        printf("ERROR: Left knob initialization failed at address 0x%02X with error %d\n", leftKnobAddress, error);
-        throw Exception("failed to setup left knob");
+        printf("WARNING: Left knob initialization failed at address 0x%02X with error %d\n", leftKnobAddress, error);
+        hasLEDs = false;
+    } else {
+        printf("DisplayMgr: Left knob initialized successfully\n");
     }
-    printf("DisplayMgr: Left knob initialized successfully\n");
 	
-	// flip the ring numbers
-	printf("DisplayMgr: Configuring LED ring offsets...\n");
-	_rightRing->setOffset(14,true);
-	_leftRing->setOffset(14, true);		// slight offset for volume control of zero
+    // Only configure LED devices if they initialized successfully
+    if(hasLEDs) {
+        // flip the ring numbers
+        printf("DisplayMgr: Configuring LED ring offsets...\n");
+        _rightRing->setOffset(14,true);
+        _leftRing->setOffset(14, true);		// slight offset for volume control of zero
+        
+        printf("DisplayMgr: Resetting and clearing devices...\n");
+        bool resetSuccess = _vfd->reset() && _rightRing->reset() && _leftRing->reset() 
+                           && _rightRing->clearAll() && _leftRing->clearAll();
+        
+        if(!resetSuccess) {
+            printf("WARNING: Failed to reset and clear LED devices\n");
+            hasLEDs = false;
+        }
+    } else {
+        printf("WARNING: LED devices not available - continuing without LED functionality\n");
+    }
 	
-	printf("DisplayMgr: Resetting and clearing devices...\n");
-	bool resetSuccess = _vfd->reset() && _rightRing->reset() && _leftRing->reset() 
-	                   && _rightRing->clearAll() && _leftRing->clearAll();
+    _isSetup = true;
 	
-	if(!resetSuccess) {
-	    printf("ERROR: Failed to reset and clear devices\n");
-	    throw Exception("failed to reset and clear devices");
-	}
+    if(_isSetup) {
+        if(hasLEDs) {
+            printf("DisplayMgr: Configuring knob parameters...\n");
+            
+            _rightKnob->setAntiBounce(antiBounceDefault);
+            _leftKnob->setAntiBounce(antiBounceDefault);
+            
+            _rightKnob->setDoubleClickTime(doubleClickTime);
+            _leftKnob->setDoubleClickTime(doubleClickTime);
+            
+            _leftRing->reset();
+            _rightRing->reset();
+            
+            // Set for normal operation
+            printf("DisplayMgr: Setting LED ring configurations...\n");
+            _rightRing->setConfig(0x01);
+            _leftRing->setConfig(0x01);
+            
+            // full scaling -- control current with global curent
+            _rightRing->SetScaling(0xFF);
+            _leftRing->SetScaling(0xFF);
+            
+            // set full bright
+            _rightRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
+            _leftRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
+            
+            // clear all values
+            _rightRing->clearAll();
+            _leftRing->clearAll();
+        }
+        
+        _eventQueue = {};
+        _ledEvent = 0;
+        
+        if(_menuSliderCBInfo) free(_menuSliderCBInfo);
+        _menuSliderCBInfo = NULL;
+        
+        if(_menuSelectionSliderCBInfo) free(_menuSelectionSliderCBInfo);
+        _menuSelectionSliderCBInfo = NULL;
+        
+        resetMenu();
+        showStartup();
+        
+        printf("DisplayMgr: Initialization completed successfully%s\n", 
+               hasLEDs ? "" : " (without LED functionality)");
+    }
 	
-	_isSetup = true;
-	
-	if(_isSetup) {
-		printf("DisplayMgr: Configuring knob parameters...\n");
-		
-		_rightKnob->setAntiBounce(antiBounceDefault);
-		_leftKnob->setAntiBounce(antiBounceDefault);
-		
-		_rightKnob->setDoubleClickTime(doubleClickTime);
-		_leftKnob->setDoubleClickTime(doubleClickTime);
-		
-		_leftRing->reset();
-		_rightRing->reset();
-		
-		// Set for normal operation
-		printf("DisplayMgr: Setting LED ring configurations...\n");
-		_rightRing->setConfig(0x01);
-		_leftRing->setConfig(0x01);
-		
-		// full scaling -- control current with global curent
-		_rightRing->SetScaling(0xFF);
-		_leftRing->SetScaling(0xFF);
-		
-		// set full bright
-		_rightRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
-		_leftRing->SetGlobalCurrent(DuppaLEDRing::maxGlobalCurrent());
-		
-		// clear all values
-		_rightRing->clearAll();
-		_leftRing->clearAll();
-		
-		_eventQueue = {};
-		_ledEvent = 0;
-		
-		if(_menuSliderCBInfo) free(_menuSliderCBInfo);
-		_menuSliderCBInfo = NULL;
-		
-		if(_menuSelectionSliderCBInfo) free(_menuSelectionSliderCBInfo);
-		_menuSelectionSliderCBInfo = NULL;
-		
-		resetMenu();
-		showStartup();
-		
-		printf("DisplayMgr: Initialization completed successfully\n");
-	}
-	
-	return _isSetup;
+    return _isSetup;
 }
 
 
@@ -5030,7 +5044,7 @@ bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
 				value = string(buffer);
 			}
 				
-			case	FrameDB::KPH:
+			case FrameDB::KPH:
 			{
 				float mph = stof(rawValue) *  0.6213712;
 				sprintf(p, "%d mph",  (int) round(mph));
