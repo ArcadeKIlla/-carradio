@@ -18,6 +18,7 @@
 #include <limits.h>
 #include <regex>
 #include <fstream>
+#include "ErrorMgr.hpp"
 
 #include <sys/utsname.h>
 #include <arpa/inet.h>
@@ -198,59 +199,59 @@ bool DisplayMgr::begin(const char* path, speed_t speed) {
 bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     _isSetup = false;
     
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initializing VFD at path %s with speed %d", path, speed);
+    printf("DisplayMgr: Initializing VFD at path %s with speed %d\n", path, speed);
     if(!_vfd->begin(path, speed)) {
         error = errno;
-        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr VFD initialization failed with error %d", error);
+        printf("ERROR: DisplayMgr VFD initialization failed with error %d\n", error);
         throw Exception("failed to setup VFD");
     }
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: VFD initialization successful");
+    printf("DisplayMgr: VFD initialization successful\n");
 	
     // Initialize each I2C device with detailed logging
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initializing LED rings and knobs...");
+    printf("DisplayMgr: Initializing LED rings and knobs...\n");
     
     if(!_rightRing->begin(rightRingAddress, error)) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Right LED ring initialization failed at address 0x%02X with error %d", rightRingAddress, error);
+        printf("ERROR: Right LED ring initialization failed at address 0x%02X with error %d\n", rightRingAddress, error);
         throw Exception("failed to setup right LED ring");
     }
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Right LED ring initialized successfully");
+    printf("DisplayMgr: Right LED ring initialized successfully\n");
     
     if(!_leftRing->begin(leftRingAddress, error)) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Left LED ring initialization failed at address 0x%02X with error %d", leftRingAddress, error);
+        printf("ERROR: Left LED ring initialization failed at address 0x%02X with error %d\n", leftRingAddress, error);
         throw Exception("failed to setup left LED ring");
     }
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Left LED ring initialized successfully");
+    printf("DisplayMgr: Left LED ring initialized successfully\n");
     
     if(!_rightKnob->begin(rightKnobAddress, error)) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Right knob initialization failed at address 0x%02X with error %d", rightKnobAddress, error);
+        printf("ERROR: Right knob initialization failed at address 0x%02X with error %d\n", rightKnobAddress, error);
         throw Exception("failed to setup right knob");
     }
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Right knob initialized successfully");
+    printf("DisplayMgr: Right knob initialized successfully\n");
     
     if(!_leftKnob->begin(leftKnobAddress, error)) {
-        ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Left knob initialization failed at address 0x%02X with error %d", leftKnobAddress, error);
+        printf("ERROR: Left knob initialization failed at address 0x%02X with error %d\n", leftKnobAddress, error);
         throw Exception("failed to setup left knob");
     }
-    ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Left knob initialized successfully");
+    printf("DisplayMgr: Left knob initialized successfully\n");
 	
 	// flip the ring numbers
-	ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Configuring LED ring offsets...");
+	printf("DisplayMgr: Configuring LED ring offsets...\n");
 	_rightRing->setOffset(14,true);
 	_leftRing->setOffset(14, true);		// slight offset for volume control of zero
 	
-	ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Resetting and clearing devices...");
+	printf("DisplayMgr: Resetting and clearing devices...\n");
 	bool resetSuccess = _vfd->reset() && _rightRing->reset() && _leftRing->reset() 
 	                   && _rightRing->clearAll() && _leftRing->clearAll();
 	
 	if(!resetSuccess) {
-	    ELOG_ERROR(ErrorMgr::FAC_I2C, 0, error, "DisplayMgr: Failed to reset and clear devices");
+	    printf("ERROR: Failed to reset and clear devices\n");
 	    throw Exception("failed to reset and clear devices");
 	}
 	
 	_isSetup = true;
 	
 	if(_isSetup) {
-		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Configuring knob parameters...");
+		printf("DisplayMgr: Configuring knob parameters...\n");
 		
 		_rightKnob->setAntiBounce(antiBounceDefault);
 		_leftKnob->setAntiBounce(antiBounceDefault);
@@ -262,7 +263,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
 		_rightRing->reset();
 		
 		// Set for normal operation
-		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Setting LED ring configurations...");
+		printf("DisplayMgr: Setting LED ring configurations...\n");
 		_rightRing->setConfig(0x01);
 		_leftRing->setConfig(0x01);
 		
@@ -290,7 +291,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
 		resetMenu();
 		showStartup();
 		
-		ELOG_DEBUG(ErrorMgr::FAC_I2C, 0, 0, "DisplayMgr: Initialization completed successfully");
+		printf("DisplayMgr: Initialization completed successfully\n");
 	}
 	
 	return _isSetup;
@@ -5006,7 +5007,7 @@ bool DisplayMgr::normalizeCANvalue(string key, string & valueOut){
 			case	FrameDB::KPH:
 			{
 				float mph = stof(rawValue) *  0.6213712;
-				sprintf(p, "%2d mph",  (int) round(mph));
+				sprintf(p, "%d mph",  (int) round(mph));
 				value = string(buffer);
 			}
 				
@@ -5384,6 +5385,3 @@ bool DisplayMgr::reset() {
     }
     return false;
 }
-```
-
-```cpp
