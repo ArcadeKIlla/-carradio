@@ -78,7 +78,7 @@ bool AudioOutput::begin(unsigned int samplerate,  bool stereo,  int &error){
 	r = snd_pcm_open(&_pcm, _PCM_,
 								SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if( r < 0){
-		ELOG("No audio device found (error %d). Audio output will be disabled.", r);
+		printf("No audio device found (error %d). Audio output will be disabled.\n", r);
 		_isSetup = false;
 		success = true; // Return success but with audio disabled
 		return success;
@@ -95,7 +95,7 @@ bool AudioOutput::begin(unsigned int samplerate,  bool stereo,  int &error){
 								  500000);         // latency in us
 	
 	if( r < 0){
-		ELOG("Failed to set audio parameters (error %d). Audio output will be disabled.", r);
+		printf("Failed to set audio parameters (error %d). Audio output will be disabled.\n", r);
 		_isSetup = false;
 		success = true; // Return success but with audio disabled
 		return success;
@@ -250,7 +250,6 @@ bool AudioOutput::writeIQ(const SampleVector& samples){
 		int k = snd_pcm_writei(_pcm, _bytebuf.data() + p * framesize, n - p);
 		
 		if (k < 0) {
-			//		ELOG_ERROR(ErrorMgr::FAC_AUDIO, 0, errno, "write failed");
 			// After an underrun, ALSA keeps returning error codes until we
 			// explicitly fix the stream.
 			snd_pcm_recover(_pcm, k, 0);
@@ -401,7 +400,7 @@ bool AudioOutput::playSound(string filePath, boolCallback_t cb){
 							int k = snd_pcm_writei(_pcm, buff + p * framesize, n - p);
 								
 								if (k < 0) {
-							//		ELOG_ERROR(ErrorMgr::FAC_AUDIO, 0, errno, "write failed");
+							//		printf("write failed");
 									// After an underrun, ALSA keeps returning error codes until we
 									// explicitly fix the stream.
 									snd_pcm_recover(_pcm, k, 0);
