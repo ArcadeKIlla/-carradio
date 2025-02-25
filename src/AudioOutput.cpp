@@ -30,13 +30,13 @@
 typedef unsigned long snd_pcm_uframes_t;
 #endif
 
- AudioOutput::AudioOutput(){
-	 _isSetup = false;
-	 _balance = 0;
-	 _fader = 0;
-	 _bass = 0;
-	 _treble = 0;
-	 _midrange = 0;
+AudioOutput::AudioOutput(){
+	_isSetup = false;
+	_balance = 0;
+	_fader = 0;
+	_bass = 0;
+	_treble = 0;
+	_midrange = 0;
 	 
 	_pcm = NULL;
  
@@ -99,7 +99,8 @@ bool AudioOutput::begin(unsigned int samplerate,  bool stereo,  int &error){
 		_isSetup = false;
 		success = true; // Return success but with audio disabled
 		return success;
-	} 	else {
+	} 
+	else {
 			
 //			printf("AudioOutput PCM at %d\n", samplerate);
 			// open the mixer
@@ -149,10 +150,7 @@ bool AudioOutput::begin(unsigned int samplerate,  bool stereo,  int &error){
 			
 			_isSetup = _volume != NULL;
 			success = true;
-		}
-		
 	}
-	
 #endif
 	
 	return success;
