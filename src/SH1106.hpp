@@ -14,6 +14,9 @@ public:
     // Override display method to use SH1106 addressing
     void display() override;
     
+    // Override begin method for SH1106-specific initialization
+    bool begin(const char* devicePath = "/dev/i2c-1") override;
+    
 private:
     // Column offset (SH1106 has 132 columns, we use 128 with 2 pixel offset)
     static const uint8_t COLUMN_OFFSET = 2;

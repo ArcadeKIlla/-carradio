@@ -41,3 +41,36 @@ void SH1106::display() {
         }
     }
 }
+
+// Override the begin function to provide SH1106-specific initialization
+bool SH1106::begin(const char* devicePath) {
+    // First call the parent class begin method to initialize I2C
+    if (!SSD1306::begin(devicePath)) {
+        return false;
+    }
+    
+    // SH1106 specific initialization
+    sendCommand(0xAE);  // Display off
+    sendCommand(0xA1);  // Segment remap
+    sendCommand(0xC8);  // COM scan direction: remapped
+    sendCommand(0xA8);  // Set multiplex ratio
+    sendCommand(0x3F);  // 64 lines
+    sendCommand(0xD3);  // Set display offset
+    sendCommand(0x00);  // No offset
+    sendCommand(0xD5);  // Set display clock
+    sendCommand(0x80);  // Recommended value
+    sendCommand(0xD9);  // Set pre-charge period
+    sendCommand(0xF1);  // Recommended value for SH1106
+    sendCommand(0xDA);  // Set COM pins
+    sendCommand(0x12);  // Alternate COM pin config
+    sendCommand(0xDB);  // Set VCOMH deselect level
+    sendCommand(0x40);  // Default value
+    sendCommand(0x81);  // Set contrast control
+    sendCommand(0xCF);  // High contrast
+    sendCommand(0xA4);  // Resume display
+    sendCommand(0x2E);  // Deactivate scroll
+    sendCommand(0xAF);  // Display on
+    
+    printf("SH1106: Display initialized with SH1106-specific settings\n");
+    return true;
+}
