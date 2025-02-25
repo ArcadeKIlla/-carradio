@@ -19,7 +19,7 @@ public:
 
     bool begin(const char* path = "/dev/i2c-1");
     void clear();
-    void display();
+    virtual void display();  
     void setContrast(uint8_t contrast);
     void invertDisplay(bool invert);
     
@@ -34,7 +34,7 @@ public:
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bool white);
     void drawChar(int16_t x, int16_t y, char c, bool white);
 
-private:
+protected:  
     bool sendCommand(uint8_t command);
     void sendData(uint8_t data);
     void sendData(const std::vector<uint8_t>& buffer);
