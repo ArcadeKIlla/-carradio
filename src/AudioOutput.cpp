@@ -1,4 +1,3 @@
-
 #include "AudioOutput.hpp"
 #include "ErrorMgr.hpp"
 #include <math.h>
@@ -79,23 +78,28 @@ bool AudioOutput::begin(unsigned int samplerate,  bool stereo,  int &error){
 	r = snd_pcm_open(&_pcm, _PCM_,
 								SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
 	if( r < 0){
-		error = r;
+		ELOG("No audio device found (error %d). Audio output will be disabled.", r);
+		_isSetup = false;
+		success = true; // Return success but with audio disabled
+		return success;
 	}
-	else {
-		
-		snd_pcm_nonblock(_pcm, 0);
-		
-		r = snd_pcm_set_params(_pcm,
-									  SND_PCM_FORMAT_S16_LE,
-									  SND_PCM_ACCESS_RW_INTERLEAVED,
-									  _nchannels,
-									  samplerate,
-									  1,               // allow soft resampling
-									  500000);         // latency in us
-		
-		if( r < 0){
-			error = r;
-		} 	else {
+	
+	snd_pcm_nonblock(_pcm, 0);
+	
+	r = snd_pcm_set_params(_pcm,
+								  SND_PCM_FORMAT_S16_LE,
+								  SND_PCM_ACCESS_RW_INTERLEAVED,
+								  _nchannels,
+								  samplerate,
+								  1,               // allow soft resampling
+								  500000);         // latency in us
+	
+	if( r < 0){
+		ELOG("Failed to set audio parameters (error %d). Audio output will be disabled.", r);
+		_isSetup = false;
+		success = true; // Return success but with audio disabled
+		return success;
+	} 	else {
 			
 //			printf("AudioOutput PCM at %d\n", samplerate);
 			// open the mixer
@@ -195,9 +199,12 @@ void AudioOutput::samplesToInt16(const SampleVector& samples,
 	 }
 }
 
-bool AudioOutput::writeAudio(const SampleVector& samples)
-{
+bool AudioOutput::writeAudio(const SampleVector& samples){
 	
+	if (!_isSetup) {
+		return true; // Return success when audio is disabled
+	}
+
 	if(!(_isQuiet || _isMuted) ){
 		
 #if defined(__APPLE__)
@@ -214,9 +221,12 @@ bool AudioOutput::writeAudio(const SampleVector& samples)
  	return true;
 }
 
-bool AudioOutput::writeIQ(const SampleVector& samples)
-{
+bool AudioOutput::writeIQ(const SampleVector& samples){
 	
+	if (!_isSetup) {
+		return true; // Return success when audio is disabled
+	}
+
 	if( _isQuiet || _isMuted )
 	{
 		return true;
@@ -855,4 +865,3 @@ bool AudioOutput::setMidrange(double val) {
 double AudioOutput::midrange() {
 	return _midrange;
 }
-
