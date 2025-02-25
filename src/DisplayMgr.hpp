@@ -73,6 +73,9 @@ public:
 	void stop();
 
 	bool reset();
+	
+	// Check if display is available
+	bool hasDisplay() const { return _vfd && _vfd->isSetup(); }
 		
 	// LED effects
 	void LEDeventStartup();

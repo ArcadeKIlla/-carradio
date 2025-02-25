@@ -208,10 +208,12 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     printf("DisplayMgr: Initializing VFD at path %s with speed %d\n", path, speed);
     if(!_vfd->begin(path, speed)) {
         error = errno;
-        printf("ERROR: DisplayMgr VFD initialization failed with error %d\n", error);
-        throw Exception("failed to setup VFD");
+        printf("WARNING: DisplayMgr VFD initialization failed with error %d. Continuing without display.\n", error);
+        _isSetup = true; // Still set _isSetup to true so the application can continue
+    } else {
+        printf("DisplayMgr: VFD initialization successful\n");
+        _isSetup = true;
     }
-    printf("DisplayMgr: VFD initialization successful\n");
     
     // Initialize I2C devices only if we're using them
     if (_hasLEDs) {
@@ -220,8 +222,6 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     } else {
         printf("DisplayMgr: Using regular rotary encoders - skipping I2C LED initialization\n");
     }
-    
-    _isSetup = true;
     
     if(_isSetup) {
         _eventQueue = {};
@@ -1416,7 +1416,7 @@ void DisplayMgr::drawMode(modeTransition_t transition,
 								  mode_state_t mode,
 								  string eventArg  ){
 	
-	if(!_isSetup)
+	if(!_isSetup || !hasDisplay())
 		return;
 	//	//
 	//		vector<string> l1 = { "ENT","RFR","IDL","XIT"};

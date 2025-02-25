@@ -91,6 +91,9 @@ public:
 #endif
 	};
 
+	// Check if display is properly initialized
+	virtual bool isSetup() const { return _isSetup; }
+
 private:
  
 	int	 	_fd;
