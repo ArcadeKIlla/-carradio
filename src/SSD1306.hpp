@@ -9,6 +9,10 @@ public:
     static const uint8_t DISPLAY_WIDTH = 128;
     static const uint8_t DISPLAY_HEIGHT = 64;
     static const uint8_t DEFAULT_I2C_ADDRESS = 0x3C;
+    static const uint8_t FONT_WIDTH = 5;
+    static const uint8_t FONT_HEIGHT = 8;
+    static const uint8_t FIRST_CHAR = 32;
+    static const uint8_t LAST_CHAR = 127;
 
     SSD1306(uint8_t i2cAddress = DEFAULT_I2C_ADDRESS);
     ~SSD1306();
@@ -28,6 +32,7 @@ public:
     void drawPixel(int16_t x, int16_t y, bool white);
     void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool white);
     void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fill, bool white);
+    void drawChar(int16_t x, int16_t y, char c, bool white);
 
 private:
     bool sendCommand(uint8_t command);
@@ -40,4 +45,5 @@ private:
     uint8_t _cursorX;
     uint8_t _cursorY;
     uint8_t _textSize;
+    bool _inverted;
 };
