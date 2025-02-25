@@ -42,6 +42,25 @@ public:
             return false;
         }
         _oled.clear();
+        
+        // Draw a test pattern to verify the display works
+        printf("SSD1306_VFD: Drawing test pattern\n");
+        // Draw a border
+        for (int i = 0; i < SH1106::DISPLAY_WIDTH; i++) {
+            _oled.drawPixel(i, 0, true);
+            _oled.drawPixel(i, SH1106::DISPLAY_HEIGHT - 1, true);
+        }
+        for (int i = 0; i < SH1106::DISPLAY_HEIGHT; i++) {
+            _oled.drawPixel(0, i, true);
+            _oled.drawPixel(SH1106::DISPLAY_WIDTH - 1, i, true);
+        }
+        
+        // Draw "INIT TEST" text
+        _oled.setCursor(10, 10);
+        _oled.print("INIT TEST");
+        _oled.setCursor(10, 20);
+        _oled.print("OLED READY");
+        
         _oled.display();
         _isSetup = true;
         printf("SSD1306_VFD: OLED display initialized successfully\n");

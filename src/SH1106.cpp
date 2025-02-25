@@ -4,6 +4,8 @@
 #include <cstring>
 
 void SH1106::display() {
+    printf("SH1106 display() called\n");
+    
     // Debug: Print the first few bytes of the buffer
     if (!_buffer.empty()) {
         printf("SH1106 buffer (first 16 bytes): ");
@@ -11,6 +13,16 @@ void SH1106::display() {
             printf("%02X ", _buffer[i]);
         }
         printf("\n");
+        
+        // Count non-zero bytes to check if we have any content
+        size_t nonZeroCount = 0;
+        for (size_t i = 0; i < _buffer.size(); i++) {
+            if (_buffer[i] != 0) {
+                nonZeroCount++;
+            }
+        }
+        printf("SH1106 buffer has %zu non-zero bytes out of %zu total bytes\n", 
+               nonZeroCount, _buffer.size());
     } else {
         printf("SH1106 buffer is empty!\n");
         return;
@@ -40,12 +52,16 @@ void SH1106::display() {
             }
         }
     }
+    printf("SH1106 display() completed\n");
 }
 
 // Override the begin function to provide SH1106-specific initialization
 bool SH1106::begin(const char* devicePath) {
+    printf("SH1106 begin() called\n");
+    
     // First call the parent class begin method to initialize I2C
     if (!SSD1306::begin(devicePath)) {
+        printf("SH1106: Failed to initialize I2C\n");
         return false;
     }
     
