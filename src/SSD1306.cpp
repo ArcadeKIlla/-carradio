@@ -149,6 +149,15 @@ bool SSD1306::begin(const char* path) {
         return false;
     }
 
+    // Make sure buffer is properly initialized
+    if (_buffer.size() != (DISPLAY_WIDTH * DISPLAY_HEIGHT / 8)) {
+        _buffer.resize(DISPLAY_WIDTH * DISPLAY_HEIGHT / 8, 0);
+        printf("SSD1306: Buffer resized to %zu bytes\n", _buffer.size());
+    } else {
+        std::fill(_buffer.begin(), _buffer.end(), 0);
+        printf("SSD1306: Buffer cleared, size: %zu bytes\n", _buffer.size());
+    }
+
     // Init sequence with error logging
     if (!sendCommand(SSD1306_DISPLAYOFF)) {
         ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, "SSD1306 Display Off failed");
@@ -232,6 +241,17 @@ void SSD1306::display() {
     sendCommand(0);
     sendCommand((DISPLAY_HEIGHT / 8) - 1);
 
+    // Debug: Print the first few bytes of the buffer
+    if (!_buffer.empty()) {
+        printf("SSD1306 buffer (first 16 bytes): ");
+        for (size_t i = 0; i < std::min(size_t(16), _buffer.size()); i++) {
+            printf("%02X ", _buffer[i]);
+        }
+        printf("\n");
+    } else {
+        printf("SSD1306 buffer is empty!\n");
+    }
+
     sendData(_buffer);
 }
 
@@ -297,11 +317,23 @@ void SSD1306::drawPixel(int16_t x, int16_t y, bool white) {
     if (x < 0 || x >= DISPLAY_WIDTH || y < 0 || y >= DISPLAY_HEIGHT)
         return;
 
-    int16_t byteIndex = x + (y / 8) * DISPLAY_WIDTH;
-    if (white)
-        _buffer[byteIndex] |= (1 << (y & 7));
-    else
-        _buffer[byteIndex] &= ~(1 << (y & 7));
+    // Each byte in the buffer represents a vertical column of 8 pixels
+    // The SSD1306 memory is arranged in horizontal strips of 8 pixels high
+    uint16_t byteIdx = (y / 8) * DISPLAY_WIDTH + x;
+    uint8_t bitIdx = y % 8;
+    
+    if (byteIdx >= _buffer.size()) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, 
+                  "SSD1306 drawPixel: Invalid buffer index: %u (size: %zu)", 
+                  byteIdx, _buffer.size());
+        return;
+    }
+    
+    if (white) {
+        _buffer[byteIdx] |= (1 << bitIdx);
+    } else {
+        _buffer[byteIdx] &= ~(1 << bitIdx);
+    }
 }
 
 void SSD1306::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool white) {
@@ -362,7 +394,12 @@ bool SSD1306::sendCommand(uint8_t command) {
 
 void SSD1306::sendData(uint8_t data) {
     uint8_t buffer[2] = {0x40, data};  // Control byte 0x40 for data
-    ::write(_i2c._fd, buffer, 2);
+    ssize_t bytesWritten = ::write(_i2c._fd, buffer, 2);
+    if (bytesWritten != 2) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, 
+                  "SSD1306 single data byte write failed: wrote %zd of 2 bytes", 
+                  bytesWritten);
+    }
 }
 
 void SSD1306::sendData(const std::vector<uint8_t>& buffer) {
@@ -371,5 +408,11 @@ void SSD1306::sendData(const std::vector<uint8_t>& buffer) {
     txBuffer.reserve(buffer.size() + 1);
     txBuffer.push_back(0x40);  // Control byte for data
     txBuffer.insert(txBuffer.end(), buffer.begin(), buffer.end());
-    ::write(_i2c._fd, txBuffer.data(), txBuffer.size());
+    
+    ssize_t bytesWritten = ::write(_i2c._fd, txBuffer.data(), txBuffer.size());
+    if (bytesWritten != static_cast<ssize_t>(txBuffer.size())) {
+        ELOG_ERROR(ErrorMgr::FAC_I2C, _i2cAddress, errno, 
+                  "SSD1306 data write failed: wrote %zd of %zu bytes", 
+                  bytesWritten, txBuffer.size());
+    }
 }

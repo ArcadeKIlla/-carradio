@@ -15,7 +15,9 @@
 class SSD1306_VFD : public VFD {
 public:
     SSD1306_VFD(uint8_t i2cAddress = SSD1306::DEFAULT_I2C_ADDRESS) 
-        : _oled(i2cAddress), _currentFont(FONT_MINI), _isSetup(false) {}
+        : _oled(i2cAddress), _currentFont(FONT_MINI), _isSetup(false) {
+        printf("SSD1306_VFD: Created with I2C address 0x%02X\n", i2cAddress);
+    }
     
     ~SSD1306_VFD() override {
         stop();
@@ -34,12 +36,15 @@ public:
     }
 
     bool init(const char* path = "/dev/i2c-1") {
+        printf("SSD1306_VFD: Initializing OLED display at %s\n", path);
         if (!_oled.begin(path)) {
+            printf("SSD1306_VFD: Failed to initialize OLED display\n");
             return false;
         }
         _oled.clear();
         _oled.display();
         _isSetup = true;
+        printf("SSD1306_VFD: OLED display initialized successfully\n");
         return true;
     }
 
