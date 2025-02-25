@@ -1,7 +1,7 @@
 #pragma once
 
 #include "VFD.hpp"
-#include "SSD1306.hpp"
+#include "SH1106.hpp"
 #include "ErrorMgr.hpp"
 #include <string>
 #include <stdarg.h>
@@ -11,10 +11,10 @@
 #define SSD1306_WHITE 1
 #define SSD1306_BLACK 0
 
-// Adapter class that makes SSD1306 OLED look like a VFD to DisplayMgr
+// Adapter class that makes SH1106 OLED look like a VFD to DisplayMgr
 class SSD1306_VFD : public VFD {
 public:
-    SSD1306_VFD(uint8_t i2cAddress = SSD1306::DEFAULT_I2C_ADDRESS) 
+    SSD1306_VFD(uint8_t i2cAddress = SH1106::DEFAULT_I2C_ADDRESS) 
         : _oled(i2cAddress), _currentFont(FONT_MINI), _isSetup(false) {
         printf("SSD1306_VFD: Created with I2C address 0x%02X\n", i2cAddress);
     }
@@ -196,15 +196,15 @@ public:
     }
 
     uint16_t width() override {
-        return SSD1306::DISPLAY_WIDTH;
+        return SH1106::DISPLAY_WIDTH;
     }
 
     uint16_t height() override {
-        return SSD1306::DISPLAY_HEIGHT;
+        return SH1106::DISPLAY_HEIGHT;
     }
 
 private:
-    SSD1306 _oled;
-    font_t _currentFont;
+    SH1106 _oled;
+    VFD::font_t _currentFont;
     bool _isSetup;
 };

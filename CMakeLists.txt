@@ -50,6 +50,7 @@ add_executable(carradio
     src/DisplayMgr.cpp
     src/SSD1306_LCD.cpp
     src/SSD1306.cpp
+    src/SH1106.cpp
     src/I2C.cpp
     src/DuppaEncoder.cpp
     src/DuppaKnob.cpp

@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "SSD1306.hpp"
+#include "SH1106.hpp"
 
 int main() {
     printf("Starting OLED test program\n");
     
     // Initialize the OLED display
-    SSD1306 display;
+    SH1106 display;
     if (!display.begin()) {
         printf("Failed to initialize OLED display\n");
         return 1;
@@ -23,22 +23,22 @@ int main() {
     
     // Draw a pattern
     // 1. A border around the display
-    for (int i = 0; i < SSD1306::DISPLAY_WIDTH; i++) {
+    for (int i = 0; i < SH1106::DISPLAY_WIDTH; i++) {
         display.drawPixel(i, 0, true);
-        display.drawPixel(i, SSD1306::DISPLAY_HEIGHT-1, true);
+        display.drawPixel(i, SH1106::DISPLAY_HEIGHT-1, true);
     }
-    for (int i = 0; i < SSD1306::DISPLAY_HEIGHT; i++) {
+    for (int i = 0; i < SH1106::DISPLAY_HEIGHT; i++) {
         display.drawPixel(0, i, true);
-        display.drawPixel(SSD1306::DISPLAY_WIDTH-1, i, true);
+        display.drawPixel(SH1106::DISPLAY_WIDTH-1, i, true);
     }
     
     // 2. Diagonal lines
-    display.drawLine(0, 0, SSD1306::DISPLAY_WIDTH-1, SSD1306::DISPLAY_HEIGHT-1, true);
-    display.drawLine(0, SSD1306::DISPLAY_HEIGHT-1, SSD1306::DISPLAY_WIDTH-1, 0, true);
+    display.drawLine(0, 0, SH1106::DISPLAY_WIDTH-1, SH1106::DISPLAY_HEIGHT-1, true);
+    display.drawLine(0, SH1106::DISPLAY_HEIGHT-1, SH1106::DISPLAY_WIDTH-1, 0, true);
     
     // 3. Draw a rectangle in the middle
-    display.drawRect(SSD1306::DISPLAY_WIDTH/4, SSD1306::DISPLAY_HEIGHT/4, 
-                     SSD1306::DISPLAY_WIDTH/2, SSD1306::DISPLAY_HEIGHT/2, 
+    display.drawRect(SH1106::DISPLAY_WIDTH/4, SH1106::DISPLAY_HEIGHT/4, 
+                     SH1106::DISPLAY_WIDTH/2, SH1106::DISPLAY_HEIGHT/2, 
                      false, true);
     
     // Update the display
