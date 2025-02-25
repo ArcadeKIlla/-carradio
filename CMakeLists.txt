@@ -135,3 +135,16 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/Assets)
     )
     add_dependencies(carradio copy_assets)
 endif()
+
+# Add OLED test executable
+add_executable(oled_test
+    src/oled_test.cpp
+    src/SSD1306.cpp
+    src/I2C.cpp
+    src/ErrorMgr.cpp
+)
+
+# Link against required libraries
+target_link_libraries(oled_test
+    pthread
+)
