@@ -218,36 +218,47 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         if (_vfd) {
             // For OLED displays, draw a test border and message
             if (_displayType == OLED_DISPLAY) {
-                // Safe cast to SSD1306_VFD* type to access OLED-specific methods
-                SSD1306_VFD* oled = dynamic_cast<SSD1306_VFD*>(_vfd);
-                if (oled) {
+                printf("DisplayMgr: Using OLED-specific drawing method\n");
+                
+                // Need to use OLED-specific methods through a properly typed pointer
+                // We know the actual type is SSD1306_VFD or derived because we checked _displayType
+                SSD1306_VFD* oledDisplay = dynamic_cast<SSD1306_VFD*>(_vfd);
+                if (oledDisplay) {
                     // Get display dimensions
                     const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
                     const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
                     
                     // Draw a border
                     for (int i = 0; i < display_width; i++) {
-                        oled->drawPixel(i, 0, true);
-                        oled->drawPixel(i, display_height - 1, true);
+                        oledDisplay->drawPixel(i, 0, true);
+                        oledDisplay->drawPixel(i, display_height - 1, true);
                     }
                     for (int i = 0; i < display_height; i++) {
-                        oled->drawPixel(0, i, true);
-                        oled->drawPixel(display_width - 1, i, true);
+                        oledDisplay->drawPixel(0, i, true);
+                        oledDisplay->drawPixel(display_width - 1, i, true);
                     }
                     
                     // Draw text
-                    oled->setCursor(10, 20);
-                    oled->print("TEST PATTERN");
-                    oled->setCursor(10, 30);
-                    oled->print("DISPLAY OK");
+                    oledDisplay->setCursor(10, 20);
+                    oledDisplay->print("TEST PATTERN");
+                    oledDisplay->setCursor(10, 30);
+                    oledDisplay->print("DISPLAY OK");
                     
-                    oled->display();
+                    oledDisplay->display();
                     printf("DisplayMgr: OLED test pattern drawn successfully\n");
                 } else {
                     printf("DisplayMgr: Error - Failed to cast to SSD1306_VFD\n");
+                    // Fall back to a simpler display method using base VFD class methods
+                    _vfd->clearScreen();
+                    _vfd->setCursor(0, 0);
+                    _vfd->setFont(VFD::FONT_5x7);
+                    _vfd->write("TEST PATTERN");
+                    _vfd->setCursor(0, 10);
+                    _vfd->write("DISPLAY OK");
                 }
             } else {
                 // For VFD displays, use base class methods
+                printf("DisplayMgr: Using VFD-specific drawing method\n");
                 _vfd->clearScreen();
                 _vfd->setCursor(0, 0);
                 _vfd->setFont(VFD::FONT_5x7);
@@ -1888,14 +1899,14 @@ void DisplayMgr::drawStartupScreen(modeTransition_t transition){
 		
 		string str = "PiCar";
 		auto start  =  centerX  -( (str.size() /2)  * 11) - 7 ;
+		
 		_vfd->setFont(VFD::FONT_10x14);
 		_vfd->setCursor( start ,centerY+5);
 		_vfd->write(str);
 		
 		string verstr = string(PiCarMgr::PiCarMgr_Version);
 		std::transform(verstr.begin(), verstr.end(),verstr.begin(), ::toupper);
-		_vfd->setFont(VFD::FONT_MINI);
-		_vfd->printPacket("%s", verstr.c_str());
+		_vfd->setFont(VFD::FONT_MINI); _vfd->printPacket("%s", verstr.c_str());
 		
 		LEDeventStartup();
 	}
