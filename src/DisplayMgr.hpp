@@ -20,6 +20,7 @@
 
 #include "VFD.hpp"
 #include "SSD1306_VFD.hpp"
+#include "U8G2_VFD.hpp"
 #include "ErrorMgr.hpp"
 #include "CommonDefs.hpp"
 #include "DuppaLEDRing.hpp"
@@ -41,7 +42,8 @@ public:
 
 	enum DisplayType {
 		VFD_DISPLAY,
-		OLED_DISPLAY
+		OLED_DISPLAY,
+		U8G2_OLED_DISPLAY
 	};
 	
 	enum EncoderType {

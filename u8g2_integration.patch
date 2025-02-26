@@ -1,0 +1,19 @@
+--- DisplayMgr.cpp.orig	2025-02-26 16:43:30.000000000 -0600
++++ DisplayMgr.cpp	2025-02-26 16:43:30.000000000 -0600
+@@ -237,6 +237,16 @@
+             if (_displayType == OLED_DISPLAY) {
+                 printf("DisplayMgr: Using OLED-specific drawing method\n");
+                 
++            } else if (_displayType == U8G2_OLED_DISPLAY) {
++                printf("DisplayMgr: Using U8G2-specific drawing method\n");
++                
++                // Use the VFD interface methods which are properly implemented in U8G2_VFD
++                _vfd->clearScreen();
++                _vfd->setCursor(0, 0);
++                _vfd->setFont(VFD::FONT_5x7);
++                _vfd->write("TEST PATTERN");
++                _vfd->setCursor(0, 10);
++                _vfd->write("DISPLAY OK");
++                printf("DisplayMgr: U8G2 test pattern drawn successfully\n");
+                 // Need to use OLED-specific methods through a properly typed pointer
+                 // We know the actual type is SSD1306_VFD or derived because we checked _displayType

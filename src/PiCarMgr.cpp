@@ -140,7 +140,7 @@ PiCarMgr * PiCarMgr::shared() {
 }
 
 
-PiCarMgr::PiCarMgr(): _display(DisplayMgr::OLED_DISPLAY){
+PiCarMgr::PiCarMgr(): _display(DisplayMgr::U8G2_OLED_DISPLAY){
 	_isSetup = false;
 	_isRunning = false;
 	_autoShutdownMode = false;

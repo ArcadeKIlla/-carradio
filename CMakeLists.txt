@@ -44,6 +44,46 @@ set(RTLSDR_LIBRARIES    ${RTLSDR_LIBRARY} ${LIBUSB_LIBRARY})
 # Set language for minmea source files
 set_source_files_properties(src/minmea.c PROPERTIES LANGUAGE C)
 
+# Add u8g2 library
+set(U8G2_DIR C:/Users/Nate/u8g2/csrc)
+set(U8G2_SOURCES
+    ${U8G2_DIR}/u8g2_bitmap.c
+    ${U8G2_DIR}/u8g2_box.c
+    ${U8G2_DIR}/u8g2_buffer.c
+    ${U8G2_DIR}/u8g2_circle.c
+    ${U8G2_DIR}/u8g2_cleardisplay.c
+    ${U8G2_DIR}/u8g2_d_memory.c
+    ${U8G2_DIR}/u8g2_d_setup.c
+    ${U8G2_DIR}/u8g2_font.c
+    ${U8G2_DIR}/u8g2_fonts.c
+    ${U8G2_DIR}/u8g2_hvline.c
+    ${U8G2_DIR}/u8g2_input_value.c
+    ${U8G2_DIR}/u8g2_intersection.c
+    ${U8G2_DIR}/u8g2_kerning.c
+    ${U8G2_DIR}/u8g2_line.c
+    ${U8G2_DIR}/u8g2_ll_hvline.c
+    ${U8G2_DIR}/u8g2_message.c
+    ${U8G2_DIR}/u8g2_polygon.c
+    ${U8G2_DIR}/u8g2_selection_list.c
+    ${U8G2_DIR}/u8g2_setup.c
+    ${U8G2_DIR}/u8x8_8x8.c
+    ${U8G2_DIR}/u8x8_byte.c
+    ${U8G2_DIR}/u8x8_cad.c
+    ${U8G2_DIR}/u8x8_capture.c
+    ${U8G2_DIR}/u8x8_d_ssd1306_128x64_noname.c
+    ${U8G2_DIR}/u8x8_debounce.c
+    ${U8G2_DIR}/u8x8_display.c
+    ${U8G2_DIR}/u8x8_fonts.c
+    ${U8G2_DIR}/u8x8_gpio.c
+    ${U8G2_DIR}/u8x8_input_value.c
+    ${U8G2_DIR}/u8x8_message.c
+    ${U8G2_DIR}/u8x8_selection_list.c
+    ${U8G2_DIR}/u8x8_setup.c
+    ${U8G2_DIR}/u8x8_string.c
+    ${U8G2_DIR}/u8x8_u16toa.c
+    ${U8G2_DIR}/u8x8_u8toa.c
+)
+
 add_executable(carradio
     src/main.cpp
     src/PiCarMgr.cpp
@@ -83,6 +123,8 @@ add_executable(carradio
     src/GMLAN.cpp
     src/OBD2.cpp
     src/minmea.c
+    src/u8g2_hw_i2c.cpp
+    ${U8G2_SOURCES}
 )
 
 set_target_properties(carradio PROPERTIES
@@ -99,6 +141,7 @@ find_package(Threads REQUIRED)
 
 include_directories(
     ${RTLSDR_INCLUDE_DIRS}
+    ${U8G2_DIR}
     ${ALSA_INCLUDE_DIRS}
     ${EXTRA_INCLUDES}
 )

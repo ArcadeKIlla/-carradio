@@ -108,8 +108,10 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	// Create display based on type
 	if (_displayType == VFD_DISPLAY) {
 		_vfd = new VFD();
-	} else {
+	} else if (_displayType == OLED_DISPLAY) {
 		_vfd = new SSD1306_VFD();
+	} else if (_displayType == U8G2_OLED_DISPLAY) {
+		_vfd = new U8G2_VFD();
 	}
 
 	// Initialize left encoder based on config
@@ -1727,8 +1729,8 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 					
 					uint8_t buff2[] = {
 						VFD::VFD_CLEAR_AREA,
-						static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY+9),
-						static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+19)};
+						static_cast<uint8_t>(0), static_cast<uint8_t>(centerY+9),
+						static_cast<uint8_t>(0+100), static_cast<uint8_t>(centerY+19)};
 					_vfd->writePacket(buff2, sizeof(buff2));
 					
 					string str = "- NOT PLAYING -";
@@ -2039,6 +2041,7 @@ void DisplayMgr::drawDeviceStatus(){
 	}
 	
 	drawTemperature();
+	drawEngineCheck();
 	
 }
 
@@ -3349,7 +3352,7 @@ void DisplayMgr::drawSquelchScreen(modeTransition_t transition){
 		char buffer[64] = {0};
 		sprintf(buffer, "Squelch: %-3d",squelch);
 		_vfd->setCursor( midX - ((strlen(buffer)*5) /2 ), topbox - 5);
-		_vfd->printPacket(buffer);
+		_vfd->write(buffer);
 	}
 }
 
@@ -4248,7 +4251,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 			}
 			
 			if( heading != INT_MAX){
-				_vfd->setCursor(col+10,topRow+22);
+				_vfd->setCursor(midX +25 ,topRow+20);
 				_vfd->printPacket("%2s %3d\xa0 %2s",heading<0?"<-":"", abs(heading), heading>0?"->":"");
 			}
 		}
