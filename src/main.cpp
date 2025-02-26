@@ -132,6 +132,9 @@ int main(int argc, const char * argv[]) {
             // Initialize for non-Apple platforms (Raspberry Pi)
             printf("Initializing radio and display...\n");
             
+            // Clear the display first to remove the init test message
+            pican->display()->clearScreen();
+            
             // Set initial volume and frequency
             pican->audio()->setVolume(.5);
             pican->radio()->setFrequencyandMode(RadioMgr::BROADCAST_FM, 101.900e6);
