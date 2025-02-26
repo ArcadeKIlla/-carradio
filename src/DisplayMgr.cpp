@@ -214,25 +214,43 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         printf("DisplayMgr: VFD initialization successful\n");
         
         // Force drawing a test pattern
-        printf("DisplayMgr: Drawing test pattern to OLED\n");
+        printf("DisplayMgr: Drawing test pattern to display\n");
         if (_vfd) {
-            // Draw a border
-            for (int i = 0; i < SH1106::DISPLAY_WIDTH; i++) {
-                _vfd->drawPixel(i, 0, true);
-                _vfd->drawPixel(i, SH1106::DISPLAY_HEIGHT - 1, true);
+            // For OLED displays, draw a test border and message
+            if (_displayType == OLED_DISPLAY) {
+                // Cast to SSD1306_VFD to access OLED-specific methods
+                SSD1306_VFD* oled = static_cast<SSD1306_VFD*>(_vfd);
+                
+                // Get display dimensions from SSD1306
+                const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
+                const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
+                
+                // Draw a border
+                for (int i = 0; i < display_width; i++) {
+                    oled->drawPixel(i, 0, true);
+                    oled->drawPixel(i, display_height - 1, true);
+                }
+                for (int i = 0; i < display_height; i++) {
+                    oled->drawPixel(0, i, true);
+                    oled->drawPixel(display_width - 1, i, true);
+                }
+                
+                // Draw text
+                oled->setCursor(10, 20);
+                oled->print("TEST PATTERN");
+                oled->setCursor(10, 30);
+                oled->print("DISPLAY OK");
+                
+                oled->display();
+            } else {
+                // For VFD displays, use base class methods
+                _vfd->clearScreen();
+                _vfd->setCursor(0, 0);
+                _vfd->setFont(VFD::FONT_5x7);
+                _vfd->write("TEST PATTERN");
+                _vfd->setCursor(0, 10);
+                _vfd->write("DISPLAY OK");
             }
-            for (int i = 0; i < SH1106::DISPLAY_HEIGHT; i++) {
-                _vfd->drawPixel(0, i, true);
-                _vfd->drawPixel(SH1106::DISPLAY_WIDTH - 1, i, true);
-            }
-            
-            // Draw text
-            _vfd->setCursor(10, 20);
-            _vfd->print("TEST PATTERN");
-            _vfd->setCursor(10, 30);
-            _vfd->print("DISPLAY OK");
-            
-            _vfd->display();
         }
         
         _isSetup = true;
@@ -4277,7 +4295,7 @@ void DisplayMgr::drawChannelInfo(modeTransition_t transition){
 		string titleStr = "";
 		PiCarMgr::station_info_t info;
 		if(mgr->getStationInfo(mode, freq, info)){
-			titleStr = truncate(info.title, maxLen);
+			titleStr = truncate(info.title,  maxLen);
 			string portionOfSpaces = spaces.substr(0, (maxLen - titleStr.size()) / 2);
 			titleStr = portionOfSpaces + titleStr;
 		}
@@ -4956,4 +4974,4 @@ bool DisplayMgr::reset() {
         return _vfd->reset();
     }
     return false;
-}
+}#include " SSD1306.hpp\
