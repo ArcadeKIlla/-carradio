@@ -136,18 +136,3 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/Assets)
     )
     add_dependencies(carradio copy_assets)
 endif()
-
-# Test pattern executable for display testing
-add_executable(test_pattern 
-    src/test_pattern.cpp 
-    src/SH1106.cpp 
-    src/SSD1306.cpp 
-    src/I2C.cpp 
-    src/ErrorMgr.cpp 
-    src/TimeStamp.cpp
-)
-
-target_link_libraries(test_pattern
-    PRIVATE
-    gpiod
-)
