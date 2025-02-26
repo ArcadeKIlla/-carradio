@@ -140,9 +140,15 @@ int main(int argc, const char * argv[]) {
             pican->radio()->setFrequencyandMode(RadioMgr::BROADCAST_FM, 101.900e6);
             pican->radio()->setON(true);
             
-            // Show the main menu after startup
-            printf("Showing main menu...\n");
-            pican->display()->showTime();
+            // Process events to ensure display is updated
+            for (int i = 0; i < 5; i++) {
+                // Give the system time to process events
+                usleep(500000); // 500ms
+                
+                // Show the main menu after startup
+                printf("Showing main menu (attempt %d)...\n", i+1);
+                pican->display()->showTime();
+            }
 #endif
             firstrun = false;
             continue;

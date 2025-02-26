@@ -76,6 +76,9 @@ public:
 	
 	// Check if display is available
 	bool hasDisplay() const { return _vfd && _vfd->isSetup(); }
+	
+	// Clear the display screen
+	bool clearScreen() { return _vfd ? _vfd->clearScreen() : false; }
 		
 	// LED effects
 	void LEDeventStartup();
