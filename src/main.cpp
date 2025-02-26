@@ -121,16 +121,31 @@ int main(int argc, const char * argv[]) {
     bool firstrun = true;
     while(true) {
         if(firstrun){
-            sleep(1);
+            // Wait a moment for initialization
+            sleep(2);
+            
 #if defined(__APPLE__)
             pican->audio()->setVolume(.5);
             pican->radio()->setFrequencyandMode(RadioMgr::BROADCAST_FM, 101.900e6);
             pican->radio()->setON(true);
-            firstrun = false;
+#else
+            // Initialize for non-Apple platforms (Raspberry Pi)
+            printf("Initializing radio and display...\n");
+            
+            // Set initial volume and frequency
+            pican->audio()->setVolume(.5);
+            pican->radio()->setFrequencyandMode(RadioMgr::BROADCAST_FM, 101.900e6);
+            pican->radio()->setON(true);
+            
+            // Show the main menu after startup
+            printf("Showing main menu...\n");
+            pican->display()->showTime();
 #endif
+            firstrun = false;
             continue;
         }
-        sleep(1);
+        // Process events more frequently
+        usleep(100000); // 100ms
     }
     return 0;
 }
