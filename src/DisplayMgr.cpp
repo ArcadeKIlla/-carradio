@@ -2090,7 +2090,7 @@ void DisplayMgr::drawAirplayLogo(uint8_t x,  uint8_t y, string text ){
 
 void  DisplayMgr::drawTemperature(){
 	
-	PiCarDB* [[maybe_unused]] db 	= PiCarMgr::shared()->db();
+	PiCarDB* db __attribute__((unused)) 	= PiCarMgr::shared()->db();
 	char buffer[128] = {0};
 	char* p = &buffer[0];
 	
