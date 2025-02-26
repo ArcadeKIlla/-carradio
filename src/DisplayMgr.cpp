@@ -151,10 +151,7 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	
 	pthread_create(&_metaReaderTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::MetaDataReaderThread, (void*)this);
-}
-
-
-DisplayMgr::~DisplayMgr(){
+}\r\n\r\n\r\nvoid DisplayMgr::stop() {\r\n\t// Turn off LEDs if any\r\n\tLEDeventStop();\r\n\t\r\n\t// If we have a display, clear and release it\r\n\tif (_vfd && _vfd->isSetup()) {\r\n\t\t_vfd->clearDisplay();\r\n\t\t_vfd->display();\r\n\t}\r\n\t\r\n\t// Stop any threads or timers if needed\r\n\t_isRunning = false;\r\n}\r\n\r\n\r\nDisplayMgr::~DisplayMgr(){
 	
 	stop();
 	
@@ -5004,3 +5001,4 @@ bool DisplayMgr::reset() {
     }
     return false;
 }
+
