@@ -536,6 +536,7 @@ void DisplayMgr::showStartup(){
 }
 
 void DisplayMgr::showTime(){
+	printf("showTime() called - setting event to push MODE_TIME\n");
 	setEvent(EVT_PUSH, MODE_TIME);
 }
 
@@ -2041,8 +2042,6 @@ void DisplayMgr::drawDeviceStatus(){
 	
 }
 
-
-
 void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 	
 	int centerY = _vfd->height() /2;
@@ -2051,28 +2050,32 @@ void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 	struct tm timeinfo = {0};
 	
 	time(&rawtime);
-	localtime_r(&rawtime, &timeinfo); // fills in your structure,
-	// instead of returning a pointer to a static
+	localtime_r(&rawtime, &timeinfo);
 	
 	char buffer[128] = {0};
 	
 	if(transition == TRANS_LEAVING) {
+		printf("Leaving TIME display mode\n");
 		return;
 	}
 	
 	if(transition == TRANS_ENTERING){
+		printf("Entering TIME display mode - clearing screen\n");
+		_vfd->clearScreen();
+		// Force a second clear to ensure the screen is fully cleared
 		_vfd->clearScreen();
 	}
 	
 	if(rawtime != -1){
 		std::strftime(buffer, sizeof(buffer)-1, "%2l:%M:%S", &timeinfo);
 		
-		_vfd->setCursor(10,38) ;
-		_vfd->setFont(VFD::FONT_10x14) ;
-		_vfd->write(buffer) ;
+		_vfd->setCursor(10,38);
+		_vfd->setFont(VFD::FONT_10x14);
+		_vfd->write(buffer);
 		
-		_vfd->setFont(VFD::FONT_5x7) ;
-		_vfd->write( (timeinfo.tm_hour > 12)?" PM":" AM");
+		_vfd->setFont(VFD::FONT_5x7);
+		_vfd->write((timeinfo.tm_hour > 12)?" PM":" AM");
+		printf("Time displayed: %s %s\n", buffer, (timeinfo.tm_hour > 12)?" PM":" AM");
 	}
 	
 	if(_airplayStatus)
@@ -2081,8 +2084,8 @@ void DisplayMgr::drawTimeScreen(modeTransition_t transition){
 	{
 		uint8_t buff2[] = {
 			VFD::VFD_CLEAR_AREA,
-			static_cast<uint8_t>(0),  static_cast<uint8_t> (centerY+9),
-			static_cast<uint8_t>(0+100),static_cast<uint8_t>(centerY+19)};
+			static_cast<uint8_t>(0), static_cast<uint8_t>(centerY+9),
+			static_cast<uint8_t>(0+100), static_cast<uint8_t>(centerY+19)};
 		
 		_vfd->writePacket(buff2, sizeof(buff2));
 	}

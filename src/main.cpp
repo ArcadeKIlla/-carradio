@@ -133,6 +133,7 @@ int main(int argc, const char * argv[]) {
             printf("Initializing radio and display...\n");
             
             // Clear the display first to remove the init test message
+            printf("Clearing display screen...\n");
             pican->display()->clearScreen();
             
             // Set initial volume and frequency
@@ -141,14 +142,17 @@ int main(int argc, const char * argv[]) {
             pican->radio()->setON(true);
             
             // Process events to ensure display is updated
-            for (int i = 0; i < 5; i++) {
-                // Give the system time to process events
-                usleep(500000); // 500ms
-                
-                // Show the main menu after startup
-                printf("Showing time display (attempt %d)...\n", i+1);
-                pican->display()->showTime();
-            }
+            printf("Forcing transition to time display...\n");
+            
+            // First, give the system time to finish startup mode
+            sleep(3);
+            
+            // Force a direct mode transition to time display
+            pican->display()->clearScreen();
+            pican->display()->showTime();
+            
+            // Wait for the display to update
+            sleep(1);
 #endif
             firstrun = false;
             continue;
