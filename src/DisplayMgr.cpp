@@ -151,12 +151,31 @@ DisplayMgr::DisplayMgr(DisplayType displayType, EncoderConfig leftConfig, Encode
 	
 	pthread_create(&_metaReaderTID, NULL,
 						(THREADFUNCPTR) &DisplayMgr::MetaDataReaderThread, (void*)this);
-}\r\n\r\n\r\nvoid DisplayMgr::stop() {\r\n\t// Turn off LEDs if any\r\n\tLEDeventStop();\r\n\t\r\n\t// If we have a display, clear and release it\r\n\tif (_vfd && _vfd->isSetup()) {\r\n\t\t_vfd->clearDisplay();\r\n\t\t_vfd->display();\r\n\t}\r\n\t\r\n\t// Stop any threads or timers if needed\r\n\t_isRunning = false;\r\n}\r\n\r\n\r\nDisplayMgr::~DisplayMgr(){
+}
+
+
+void DisplayMgr::stop() {
+    // Turn off LEDs if any
+    LEDeventStop();
+    
+    // If we have a display, clear and release it
+    if (_vfd) {
+        // Call VFD's stop method
+        _vfd->stop();
+    }
+    
+    // Stop any threads or timers if needed
+    _isRunning = false;
+}
+
+
+DisplayMgr::~DisplayMgr(){
 	
 	stop();
 	
 	if(_menuSliderCBInfo) free(_menuSliderCBInfo);
 	if(_menuSelectionSliderCBInfo) free(_menuSelectionSliderCBInfo);
+
 
 	// Clean up display
 	if (_vfd) {
@@ -4980,6 +4999,7 @@ void* DisplayMgr::MetaDataReaderThread(void *context){
 	//   the pthread_cleanup_push needs to be balanced with pthread_cleanup_pop
 	pthread_cleanup_push(   &DisplayMgr::MetaDataReaderThreadCleanup ,context);
 	
+		
 	d->MetaDataReaderLoop();
 	
 	pthread_exit(NULL);
@@ -5001,18 +5021,3 @@ bool DisplayMgr::reset() {
     }
     return false;
 }
-
-void DisplayMgr::stop() {
-	// Turn off LEDs if any
-	LEDeventStop();
-	
-	// If we have a display, clear and release it
-	if (_vfd && _vfd->isSetup()) {
-		_vfd->clearDisplay();
-		_vfd->display();
-	}
-	
-	// Stop any threads or timers if needed
-	_isRunning = false;
-}
-
