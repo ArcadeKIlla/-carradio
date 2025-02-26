@@ -225,7 +225,7 @@ void CANBusMgr::processISOTPFrame(string ifName, can_frame_t frame, unsigned lon
 		//  flow control C  frame
 	 
 		uint8_t frame_flag 		= frame.data[0] & 0x0f;
-		[[maybe_unused]] uint8_t block_size 		= frame.data[1];  // Will be used when implementing block transfer
+		uint8_t block_size __attribute__((unused)) = frame.data[1];  // Will be used when implementing block transfer
 		uint8_t separation_delay = frame.data[2];
 
 		uint32_t hash = XXHash32::hash(ifName + to_hex(can_id, true));

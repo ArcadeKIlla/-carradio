@@ -4,7 +4,7 @@
 const uint8_t LCD_COLS = 16;
 const uint8_t LCD_ROWS = 2;
 const uint8_t CHAR_WIDTH = 6;  // Width of each character in pixels
-[[maybe_unused]] const uint8_t CHAR_HEIGHT = 8; // Height of each character in pixels
+const uint8_t CHAR_HEIGHT __attribute__((unused)) = 8; // Height of each character in pixels
 const uint8_t ROW_HEIGHT = 16; // Pixels between rows for better readability (2 * CHAR_HEIGHT)
 
 SSD1306_LCD::SSD1306_LCD(uint8_t i2cAddress) 
