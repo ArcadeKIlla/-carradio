@@ -218,30 +218,34 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         if (_vfd) {
             // For OLED displays, draw a test border and message
             if (_displayType == OLED_DISPLAY) {
-                // Cast to SSD1306_VFD to access OLED-specific methods
-                SSD1306_VFD* oled = static_cast<SSD1306_VFD*>(_vfd);
-                
-                // Get display dimensions from SSD1306
-                const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
-                const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
-                
-                // Draw a border
-                for (int i = 0; i < display_width; i++) {
-                    oled->drawPixel(i, 0, true);
-                    oled->drawPixel(i, display_height - 1, true);
+                // Safe cast to SSD1306_VFD* type to access OLED-specific methods
+                SSD1306_VFD* oled = dynamic_cast<SSD1306_VFD*>(_vfd);
+                if (oled) {
+                    // Get display dimensions
+                    const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
+                    const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
+                    
+                    // Draw a border
+                    for (int i = 0; i < display_width; i++) {
+                        oled->drawPixel(i, 0, true);
+                        oled->drawPixel(i, display_height - 1, true);
+                    }
+                    for (int i = 0; i < display_height; i++) {
+                        oled->drawPixel(0, i, true);
+                        oled->drawPixel(display_width - 1, i, true);
+                    }
+                    
+                    // Draw text
+                    oled->setCursor(10, 20);
+                    oled->print("TEST PATTERN");
+                    oled->setCursor(10, 30);
+                    oled->print("DISPLAY OK");
+                    
+                    oled->display();
+                    printf("DisplayMgr: OLED test pattern drawn successfully\n");
+                } else {
+                    printf("DisplayMgr: Error - Failed to cast to SSD1306_VFD\n");
                 }
-                for (int i = 0; i < display_height; i++) {
-                    oled->drawPixel(0, i, true);
-                    oled->drawPixel(display_width - 1, i, true);
-                }
-                
-                // Draw text
-                oled->setCursor(10, 20);
-                oled->print("TEST PATTERN");
-                oled->setCursor(10, 30);
-                oled->print("DISPLAY OK");
-                
-                oled->display();
             } else {
                 // For VFD displays, use base class methods
                 _vfd->clearScreen();
@@ -250,6 +254,7 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
                 _vfd->write("TEST PATTERN");
                 _vfd->setCursor(0, 10);
                 _vfd->write("DISPLAY OK");
+                printf("DisplayMgr: VFD test pattern drawn successfully\n");
             }
         }
         
@@ -4225,7 +4230,7 @@ void DisplayMgr::drawGPSWaypointScreen(modeTransition_t transition){
 
 
 void DisplayMgr::showChannel( RadioMgr::channel_t channel,
-									  showChannelCallBack_t cb) {
+									  showChannelCallBack_t cb){
 	if(channel.first != RadioMgr::MODE_UNKNOWN){
 		_currentChannel = channel;
 		_showChannelCB = cb;
@@ -4974,4 +4979,4 @@ bool DisplayMgr::reset() {
         return _vfd->reset();
     }
     return false;
-}#include " SSD1306.hpp\
+}
