@@ -145,9 +145,9 @@ int main(int argc, const char * argv[]) {
                 // Give the system time to process events
                 usleep(500000); // 500ms
                 
-                // Force a mode transition to TIME mode
-                printf("Forcing display to TIME mode (attempt %d)...\n", i+1);
-                pican->display()->setEvent(DisplayMgr::EVT_PUSH, DisplayMgr::MODE_TIME);
+                // Show the main menu after startup
+                printf("Showing time display (attempt %d)...\n", i+1);
+                pican->display()->showTime();
             }
 #endif
             firstrun = false;
