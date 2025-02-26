@@ -212,6 +212,29 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
         _isSetup = true; // Still set _isSetup to true so the application can continue
     } else {
         printf("DisplayMgr: VFD initialization successful\n");
+        
+        // Force drawing a test pattern
+        printf("DisplayMgr: Drawing test pattern to OLED\n");
+        if (_vfd) {
+            // Draw a border
+            for (int i = 0; i < SH1106::DISPLAY_WIDTH; i++) {
+                _vfd->drawPixel(i, 0, true);
+                _vfd->drawPixel(i, SH1106::DISPLAY_HEIGHT - 1, true);
+            }
+            for (int i = 0; i < SH1106::DISPLAY_HEIGHT; i++) {
+                _vfd->drawPixel(0, i, true);
+                _vfd->drawPixel(SH1106::DISPLAY_WIDTH - 1, i, true);
+            }
+            
+            // Draw text
+            _vfd->setCursor(10, 20);
+            _vfd->print("TEST PATTERN");
+            _vfd->setCursor(10, 30);
+            _vfd->print("DISPLAY OK");
+            
+            _vfd->display();
+        }
+        
         _isSetup = true;
     }
     
@@ -241,50 +264,6 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
     }
     
     return _isSetup;
-}
-
-
-void DisplayMgr::stop(){
-	
-	_isRunning = false;
-	
-	pthread_cond_signal(&_cond);
-	pthread_join(_updateTID, NULL);
-	
-	pthread_cond_signal(&_led_cond);
-	if(_hasLEDs) pthread_join(_ledUpdateTID, NULL);
-	
-	pthread_join(_metaReaderTID, NULL);
-	
-	if(_vfd) {
-		_vfd->stop();
-	}
-	
-	if(_leftEncoder) {
-		_leftEncoder->stop();
-		delete _leftEncoder;
-		_leftEncoder = nullptr;
-	}
-	
-	if(_rightEncoder) {
-		_rightEncoder->stop();
-		delete _rightEncoder;
-		_rightEncoder = nullptr;
-	}
-	
-	if(_leftRing) {
-		_leftRing->stop();
-		delete _leftRing;
-		_leftRing = nullptr;
-	}
-	
-	if(_rightRing) {
-		_rightRing->stop();
-		delete _rightRing;
-		_rightRing = nullptr;
-	}
-	
-	_isSetup = false;
 }
 
 
@@ -1764,6 +1743,10 @@ void DisplayMgr::drawRadioScreen(modeTransition_t transition){
 				titlebuff[titleMaxSize] = '\0';
 				int titleStart =  centerX - ((titleMaxSize * 6)/2);
 				int titleBottom = centerY -10;
+				PiCarMgr*			mgr 	= PiCarMgr::shared();
+				PiCarDB*				db 	= mgr->db();
+				RadioMgr::radio_mode_t  mode  = radio->radioMode();
+				uint32_t						freq =  radio->frequency();
 				PiCarMgr::station_info_t info;
 				if(mgr->getStationInfo(mode, freq, info)){
 					string title = truncate(info.title, titleMaxSize);
