@@ -1510,8 +1510,8 @@ void PiCarMgr::PiCarLoop(){
 			DuppaKnob* tunerKnob =	_display.rightKnob();
 			DuppaKnob* volKnob = 	_display.leftKnob();
 			
-			uint8_t volKnobStatus = 0;
-			uint8_t tunerKnobStatus  = 0;
+			[[maybe_unused]] uint8_t volKnobStatus = 0;
+			[[maybe_unused]] uint8_t tunerKnobStatus  = 0;
 			
 			// loop until status changes
 			for(;;) {
@@ -1520,7 +1520,7 @@ void PiCarMgr::PiCarLoop(){
 				
 				// check if knobs changed
 				{
-					bool status_changed = false;
+					[[maybe_unused]] bool status_changed = false;
 					
 					volKnob->updateStatus();
 					volWasClicked = volKnob->wasClicked();

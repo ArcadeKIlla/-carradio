@@ -224,28 +224,41 @@ bool DisplayMgr::begin(const char* path, speed_t speed, int &error) {
                 // We know the actual type is SSD1306_VFD or derived because we checked _displayType
                 SSD1306_VFD* oledDisplay = dynamic_cast<SSD1306_VFD*>(_vfd);
                 if (oledDisplay) {
-                    // Get display dimensions
-                    const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
-                    const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
-                    
-                    // Draw a border
-                    for (int i = 0; i < display_width; i++) {
-                        oledDisplay->drawPixel(i, 0, true);
-                        oledDisplay->drawPixel(i, display_height - 1, true);
+                    // Access the SH1106 object for drawing functions
+                    SH1106* oledDriver = oledDisplay->getOLEDDriver();
+                    if (oledDriver) {
+                        // Get display dimensions
+                        const uint8_t display_width = SSD1306::DISPLAY_WIDTH;
+                        const uint8_t display_height = SSD1306::DISPLAY_HEIGHT;
+                        
+                        // Draw a border
+                        for (int i = 0; i < display_width; i++) {
+                            oledDriver->drawPixel(i, 0, true);
+                            oledDriver->drawPixel(i, display_height - 1, true);
+                        }
+                        for (int i = 0; i < display_height; i++) {
+                            oledDriver->drawPixel(0, i, true);
+                            oledDriver->drawPixel(display_width - 1, i, true);
+                        }
+                        
+                        // Draw text
+                        oledDriver->setCursor(10, 20);
+                        oledDriver->print("TEST PATTERN");
+                        oledDriver->setCursor(10, 30);
+                        oledDriver->print("DISPLAY OK");
+                        
+                        oledDriver->display();
+                        printf("DisplayMgr: OLED test pattern drawn successfully\n");
+                    } else {
+                        printf("DisplayMgr: Error - Could not access OLED driver\n");
+                        // Fall back to a simpler display method using base VFD class methods
+                        _vfd->clearScreen();
+                        _vfd->setCursor(0, 0);
+                        _vfd->setFont(VFD::FONT_5x7);
+                        _vfd->write("TEST PATTERN");
+                        _vfd->setCursor(0, 10);
+                        _vfd->write("DISPLAY OK");
                     }
-                    for (int i = 0; i < display_height; i++) {
-                        oledDisplay->drawPixel(0, i, true);
-                        oledDisplay->drawPixel(display_width - 1, i, true);
-                    }
-                    
-                    // Draw text
-                    oledDisplay->setCursor(10, 20);
-                    oledDisplay->print("TEST PATTERN");
-                    oledDisplay->setCursor(10, 30);
-                    oledDisplay->print("DISPLAY OK");
-                    
-                    oledDisplay->display();
-                    printf("DisplayMgr: OLED test pattern drawn successfully\n");
                 } else {
                     printf("DisplayMgr: Error - Failed to cast to SSD1306_VFD\n");
                     // Fall back to a simpler display method using base VFD class methods
@@ -2077,7 +2090,7 @@ void DisplayMgr::drawAirplayLogo(uint8_t x,  uint8_t y, string text ){
 
 void  DisplayMgr::drawTemperature(){
 	
-	PiCarDB*		db 	= PiCarMgr::shared()->db();
+	PiCarDB* [[maybe_unused]] db 	= PiCarMgr::shared()->db();
 	char buffer[128] = {0};
 	char* p = &buffer[0];
 	
@@ -2532,7 +2545,7 @@ void DisplayMgr::drawInfoScreen(modeTransition_t transition){
 	string str;
  
 	PiCarMgr*			mgr 	= PiCarMgr::shared();
-	PiCarDB*				db 		= mgr->db();
+	PiCarDB*				db 	= mgr->db();
 #if USE_COMPASS
 	CompassSensor* 	compass	= mgr->compass();
 #endif

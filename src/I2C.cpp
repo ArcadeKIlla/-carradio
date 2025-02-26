@@ -70,7 +70,7 @@ static inline int i2c_smbus_access (int fd, char rw, uint8_t command, int size, 
   return ::ioctl (fd, I2C_SMBUS, &args) ;
 }
 
-static inline int i2c_smbus_read_i2c_block_data (int fd, uint8_t command, int size, uint8_t *data)
+static inline int __attribute__((unused)) i2c_smbus_read_i2c_block_data (int fd, uint8_t command, int size, uint8_t *data)
 {
   struct i2c_smbus_ioctl_data args ;
 
@@ -81,7 +81,7 @@ static inline int i2c_smbus_read_i2c_block_data (int fd, uint8_t command, int si
   return ::ioctl (fd, I2C_SMBUS, &args) ;
 }
 
-static inline int i2c_smbus_write_i2c_block_data (int fd, uint8_t command, int size, uint8_t *data)
+static inline int __attribute__((unused)) i2c_smbus_write_i2c_block_data (int fd, uint8_t command, int size, uint8_t *data)
 {
   struct i2c_smbus_ioctl_data args ;
 

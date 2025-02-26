@@ -222,6 +222,11 @@ public:
         return SH1106::DISPLAY_HEIGHT;
     }
 
+    // Get access to the underlying OLED driver
+    SH1106* getOLEDDriver() {
+        return &_oled;
+    }
+
 private:
     SH1106 _oled;
     VFD::font_t _currentFont;
