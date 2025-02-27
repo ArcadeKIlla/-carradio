@@ -19,7 +19,7 @@ int main() {
     // Initialize with I2C on Raspberry Pi
     // /dev/i2c-1 is the default I2C bus on most Raspberry Pi models
     // 0x3C is the default I2C address for most SH1106 displays
-    if (!display->begin("/dev/i2c-1", 0x3C)) {
+    if (!display->begin("/dev/i2c-1", (uint8_t)0x3C)) {
         std::cerr << "Failed to initialize display!" << std::endl;
         delete display;
         return 1;
