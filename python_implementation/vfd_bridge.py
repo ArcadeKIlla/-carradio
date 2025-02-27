@@ -43,7 +43,7 @@ class VFDBridge:
         self.display.set_cursor(0, 1)  # Set cursor to row 1
         self.display.write("Starting...")
         time.sleep(1)
-        self.display.clear()
+        self.display.clear_screen()
         
     def start(self):
         """Start the VFD bridge server"""
@@ -150,23 +150,32 @@ class VFDBridge:
                 
             elif cmd_type == 'clear':
                 # Clear display
-                self.display.clear()
+                self.display.clear_screen()
                 
             elif cmd_type == 'printLines':
                 # Print multiple lines
                 lines = cmd_data.get('lines', [])
-                self.display.printLines(lines)
+                self.display.clear_screen()
+                for i, line in enumerate(lines):
+                    self.display.set_cursor(0, i)
+                    self.display.write(line)
                 
             elif cmd_type == 'drawScrollBar':
                 # Draw scroll bar
                 position = cmd_data.get('position', 0)
                 size = cmd_data.get('size', 1)
-                self.display.drawScrollBar(position, size)
+                self.display.draw_scroll_bar(0, size, position)
                 
             elif cmd_type == 'setFont':
                 # Set font size
                 size = cmd_data.get('size', 1)
-                self.display.setFont(size)
+                font_map = {
+                    0: self.display.FONT_MINI,
+                    1: self.display.FONT_5x7,
+                    2: self.display.FONT_10x14
+                }
+                font = font_map.get(size, self.display.FONT_MINI)
+                self.display.set_font(font)
                 
             else:
                 logger.warning(f"Unknown command type: {cmd_type}")
@@ -178,7 +187,7 @@ class VFDBridge:
                 if len(parts) > 1:
                     self.display.write(parts[1])
             elif command == "clear":
-                self.display.clear()
+                self.display.clear_screen()
             else:
                 logger.warning(f"Invalid command format: {command}")
                 
