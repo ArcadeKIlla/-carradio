@@ -33,7 +33,7 @@ class VFDBridge:
     def __init__(self):
         """Initialize the VFD bridge"""
         self.display = VFD_SH1106_Adapter()
-        self.display.begin()
+        self.display.begin("/dev/i2c-1")  # Specify the I2C device path
         self.running = False
         self.socket = None
         self.clients = []
