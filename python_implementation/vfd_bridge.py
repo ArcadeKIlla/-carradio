@@ -40,7 +40,8 @@ class VFDBridge:
         
         # Display startup message
         self.display.write("VFD Bridge")
-        self.display.write("Starting...", 1)
+        self.display.set_cursor(0, 1)  # Set cursor to row 1
+        self.display.write("Starting...")
         time.sleep(1)
         self.display.clear()
         
@@ -76,7 +77,8 @@ class VFDBridge:
         except Exception as e:
             logger.error(f"Error starting VFD Bridge: {str(e)}")
             self.display.write("Error:")
-            self.display.write(str(e)[:20], 1)  # Show first 20 chars of error
+            self.display.set_cursor(0, 1)  # Set cursor to row 1
+            self.display.write(str(e)[:20])  # Show first 20 chars of error
             
         finally:
             self.stop()
@@ -143,7 +145,8 @@ class VFDBridge:
                 # Write text to display
                 text = cmd_data.get('text', '')
                 line = cmd_data.get('line', 0)
-                self.display.write(text, line)
+                self.display.set_cursor(0, line)  # Set cursor to specified line
+                self.display.write(text)
                 
             elif cmd_type == 'clear':
                 # Clear display
