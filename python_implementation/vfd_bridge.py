@@ -154,28 +154,48 @@ class VFDBridge:
                 
             elif cmd_type == 'printLines':
                 # Print multiple lines
-                lines = cmd_data.get('lines', [])
-                self.display.clear_screen()
-                for i, line in enumerate(lines):
-                    self.display.set_cursor(0, i)
-                    self.display.write(line)
+                try:
+                    lines = cmd_data.get('lines', [])
+                    if not isinstance(lines, list):
+                        logger.warning(f"Invalid lines format, expected list but got {type(lines)}")
+                        lines = []
+                    
+                    self.display.clear_screen()
+                    for i, line in enumerate(lines):
+                        if i >= 8:  # Limit to reasonable number of lines
+                            break
+                        self.display.set_cursor(0, i)
+                        self.display.write(str(line))
+                except Exception as e:
+                    logger.error(f"Error printing lines: {str(e)}")
                 
             elif cmd_type == 'drawScrollBar':
                 # Draw scroll bar
-                position = cmd_data.get('position', 0)
-                size = cmd_data.get('size', 1)
-                self.display.draw_scroll_bar(0, size, position)
+                try:
+                    position = float(cmd_data.get('position', 0))
+                    size = float(cmd_data.get('size', 1))
+                    # Ensure values are within valid range (0.0-1.0)
+                    position = max(0.0, min(1.0, position))
+                    size = max(0.1, min(1.0, size))
+                    # Call with correct parameters (top=0, bar_height=size, starting_offset=position)
+                    self.display.draw_scroll_bar(0, size, position)
+                except Exception as e:
+                    logger.error(f"Error drawing scroll bar: {str(e)}")
                 
             elif cmd_type == 'setFont':
                 # Set font size
-                size = cmd_data.get('size', 1)
-                font_map = {
-                    0: self.display.FONT_MINI,
-                    1: self.display.FONT_5x7,
-                    2: self.display.FONT_10x14
-                }
-                font = font_map.get(size, self.display.FONT_MINI)
-                self.display.set_font(font)
+                try:
+                    size = int(cmd_data.get('size', 1))
+                    # Map size to font constants
+                    font_map = {
+                        0: self.display.FONT_MINI,
+                        1: self.display.FONT_5x7,
+                        2: self.display.FONT_10x14
+                    }
+                    font = font_map.get(size, self.display.FONT_MINI)
+                    self.display.set_font(font)
+                except Exception as e:
+                    logger.error(f"Error setting font: {str(e)}")
                 
             else:
                 logger.warning(f"Unknown command type: {cmd_type}")
