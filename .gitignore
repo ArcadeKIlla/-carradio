@@ -1,0 +1,31 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# Build directories
+/build/
+/bin/
+/lib/
+/Debug/
+/Release/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Dependency directories
+/u8g2_src/
+/u8g2/
+
+# Compiled example
+/example_raspberry_pi
