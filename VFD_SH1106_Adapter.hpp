@@ -17,7 +17,9 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include <U8g2lib.h>
+
+// Use relative path for u8g2 library - this allows more flexibility in installation
+#include "u8g2/cppsrc/U8g2lib.h"
 
 #ifdef __linux__
 #include <fcntl.h>

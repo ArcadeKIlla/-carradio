@@ -6,7 +6,26 @@ This project provides an adapter to replace the VFD display in the original CarR
 
 This adapter is designed to work on a Raspberry Pi. Follow these steps to set up your Raspberry Pi for use with the SH1106 OLED display:
 
-### 1. Enable I2C on Raspberry Pi
+### Quick Setup (Recommended)
+
+```bash
+# Clone the repository if you haven't already
+git clone https://github.com/ArcadeKIlla/-carradio.git carradio_sh1106
+cd carradio_sh1106
+
+# Checkout the sh1106-adapter branch
+git checkout sh1106-adapter
+
+# Run the setup script (requires sudo)
+chmod +x setup_raspberry_pi.sh
+sudo ./setup_raspberry_pi.sh
+```
+
+### Manual Setup
+
+If you prefer to set up manually, follow these steps:
+
+#### 1. Enable I2C on Raspberry Pi
 
 ```bash
 # Open the Raspberry Pi configuration tool
@@ -17,7 +36,7 @@ sudo raspi-config
 sudo reboot
 ```
 
-### 2. Install Required Packages
+#### 2. Install Required Packages
 
 ```bash
 # Update package lists
@@ -27,27 +46,28 @@ sudo apt-get update
 sudo apt-get install -y i2c-tools libi2c-dev
 
 # Install build tools if not already installed
-sudo apt-get install -y build-essential cmake git
+sudo apt-get install -y build-essential git
 ```
 
-### 3. Install the U8g2 Library
+#### 3. Install the U8g2 Library
 
 ```bash
-# Clone the u8g2 library
+# Clone the u8g2 library into your project directory
 git clone https://github.com/olikraus/u8g2.git
-
-# Navigate to the u8g2 directory
-cd u8g2/
-
-# Copy the library to your project or install system-wide
-# Option 1: Copy to your project (recommended)
-cp -r csrc /path/to/your/project/u8g2_src
-
-# Option 2: Install system-wide (advanced)
-# Follow the instructions in the u8g2 repository
 ```
 
-### 4. Verify I2C Connection
+#### 4. Build the Example
+
+```bash
+# Build the example
+make clean
+make
+
+# Run the example
+./example_raspberry_pi
+```
+
+#### 5. Verify I2C Connection
 
 ```bash
 # Scan for I2C devices to verify your display is connected
@@ -56,7 +76,7 @@ sudo i2cdetect -y 1
 
 You should see your SH1106 display listed (typically at address 0x3C or 0x3D).
 
-### 5. Wiring the SH1106 OLED Display to Raspberry Pi
+### Wiring the SH1106 OLED Display to Raspberry Pi
 
 Connect your SH1106 OLED display to the Raspberry Pi using these connections:
 
@@ -89,6 +109,12 @@ display->begin("/dev/i2c-1", 0x3C); // Use the I2C bus and address
 2. Verify wiring connections
 3. Ensure I2C is enabled in raspi-config
 4. Check power supply - the SH1106 requires stable power
+
+### Build Issues
+
+1. Make sure you've cloned the u8g2 library into the project directory
+2. Check that the u8g2 directory structure matches what's expected in the Makefile
+3. If you get include errors, verify the paths in the Makefile and header files
 
 ### Display Shows Garbled Text
 
