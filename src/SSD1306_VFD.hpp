@@ -81,6 +81,17 @@ public:
         return true;
     }
 
+    bool clearScreen() override {
+        if (!_isSetup) return false;
+        printf("SSD1306_VFD: Clearing screen...\n");
+        _oled.clear();
+        _oled.display();
+        // Force a second clear to ensure all pixels are off
+        _oled.clear();
+        _oled.display();
+        return true;
+    }
+
     bool write(string str) override {
         if (!_isSetup) return false;
         _oled.print(str);
@@ -165,13 +176,6 @@ public:
             _oled.clear();
             _oled.display();
         }
-        return true;
-    }
-
-    bool clearScreen() override {
-        if (!_isSetup) return false;
-        _oled.clear();
-        _oled.display();
         return true;
     }
 

@@ -133,8 +133,12 @@ int main(int argc, const char * argv[]) {
             printf("Initializing radio and display...\n");
             
             // Clear the display first to remove the init test message
-            printf("Clearing display screen...\n");
+            printf("Clearing display screen with multiple attempts...\n");
+            // Try multiple clear attempts with delays to ensure display is cleared
             pican->display()->clearScreen();
+            usleep(100000); // 100ms delay
+            pican->display()->clearScreen();
+            usleep(100000); // 100ms delay
             
             // Set initial volume and frequency
             pican->audio()->setVolume(.5);
@@ -149,6 +153,7 @@ int main(int argc, const char * argv[]) {
             
             // Force a direct mode transition to time display
             pican->display()->clearScreen();
+            usleep(100000); // 100ms delay
             pican->display()->showTime();
             
             // Wait for the display to update

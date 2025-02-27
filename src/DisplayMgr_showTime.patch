@@ -1,0 +1,10 @@
+--- src/DisplayMgr.cpp.orig	2025-02-26 12:47:00
++++ src/DisplayMgr.cpp	2025-02-26 12:47:00
+@@ -536,6 +536,7 @@
+ }
+ 
+ void DisplayMgr::showTime(){
++	printf("DisplayMgr::showTime() - Setting event to MODE_TIME\n");
+ 	setEvent(EVT_PUSH, MODE_TIME);
+ }
+ 
