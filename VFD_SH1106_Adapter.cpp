@@ -165,7 +165,7 @@ bool VFD_SH1106_Adapter::write(const char* str) {
         return false;
     
     _u8g2->setCursor(_cursorX, _cursorY);
-    _u8g2->print(str);
+    _u8g2->drawStr(_cursorX, _cursorY, str);
     sendBuffer();
     return true;
 }

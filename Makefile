@@ -7,7 +7,7 @@ CXXFLAGS = -Wall -Wextra -std=c++11 -I. -I/usr/include -I/usr/local/include
 
 # Add U8g2 library path - update this path if needed
 U8G2_PATH = ./u8g2
-CXXFLAGS += -I$(U8G2_PATH)/cppsrc
+CXXFLAGS += -I$(U8G2_PATH)/cppsrc -I$(U8G2_PATH)/csrc
 
 # For Raspberry Pi, we need to link against the appropriate libraries
 LDFLAGS = -L/usr/lib -L/usr/local/lib -lm -lpthread

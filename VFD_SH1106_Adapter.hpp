@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <cmath>      // For ceil function
 
 // Use relative path for u8g2 library - this allows more flexibility in installation
 #include "u8g2/cppsrc/U8g2lib.h"
@@ -25,6 +26,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <termios.h>  // For speed_t and B19200
 #endif
 
 using namespace std;
