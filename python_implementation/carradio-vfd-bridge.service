@@ -1,0 +1,16 @@
+[Unit]
+Description=CarRadio VFD Bridge for SH1106 OLED Display
+After=network.target
+
+[Service]
+Type=simple
+User=nate
+WorkingDirectory=/home/nate/carradio_fresh
+ExecStart=/home/nate/carradio_fresh/venv/bin/python /home/nate/carradio_fresh/python_implementation/vfd_bridge.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
